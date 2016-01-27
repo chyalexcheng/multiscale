@@ -68,7 +68,7 @@ class MultiScale(object):
       :param FEDEBoundMap: a dictionary with FE and DE boundary element IDs in keys and values
       :param conf: type float, conf pressure on membrane
       """
-      self.__domain=ReadGmsh(mshName+'.msh',numDim=dim,integrationOrder=2)
+      self.__domain=ReadGmsh(mshName+'.msh',numDim=dim,integrationOrder=1)
       self.__pde=LinearPDE(self.__domain,numEquations=dim,numSolutions=dim)
       self.__pde.getSolverOptions().setSolverMethod(SolverOptions.HRZ_LUMPING)
       self.__pde.setSymmetryOn()

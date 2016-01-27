@@ -18,16 +18,16 @@ import shutil
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # read Gmsh mesh with 6-node triangle element (8 tri6); each element has 4 Gauss points
-mshName = 'Msh2'
+mshName = 'Msh2'; numOfElements = 32
 # number of Gauss points
-numg = 3*32
+gp = 1; numg = gp*numOfElements;
 packNo=range(0,numg)
 # density and damping ratio
 rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 2.0; duration = 25
+safe = 10.0; duration = 25
 # import membrane node Ids in exterior DE domain
 mIds = numpy.load('mNodesIds'+mshName+'.npy')
 # import FE-DE boundary node mapping
@@ -37,7 +37,7 @@ FEDEBoundMap = numpy.load('FEDEBoundMap'+mshName+'.npy').item()
 # boundary pressure on DE membrane
 conf = 0
 # open file to write force on the top surface with its length
-graphDir = './result/graphs/msTest1_Explicit/'
+graphDir = './result/graphs/msTest1_Explicit/gp'+str(gp)+'/'
 fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'.dat','w')
 
 ###################
@@ -74,7 +74,7 @@ dt = safe*(2./eigFreq)
 #~ T = prob.getCurrentTangent()
 #~ maxM = max(T[0,0,0,0].toListOfTuples())
 #~ PwaveVel = sqrt(maxM/rho)
-#~ dt = safe*inf(mydomain.getSize()/PwaveVel)
+#~ dt = safe*inf(prob.getDomain().getSize()/PwaveVel)
 
 # initialize partial difference equation and return timestep
 prob.initialize(specified_u_mask=Dbc, specified_u_val=Dbc_val, dt=dt)
@@ -88,7 +88,7 @@ time_start = time.time()
 t = 1
 nt = int(duration/dt)
 # directory to save vtk data
-vtkDir = "./result/vtk/msTest1/explicit"   
+vtkDir = './result/vtk/msTest1/explicit/gp'+str(gp)+'/'
 
 while t <= nt:
    # update displacement and velocity at (n+1) timesteps

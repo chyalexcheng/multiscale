@@ -25,9 +25,12 @@ from yade import export
 
 ### Below is added for surface coupling by Hongyang Cheng ###
 
+DE_int = 'DE_alum.yade.gz'
+DE_ext = 'DE_ext_Msh2.yade.gz'
+
 # load exterior DE domain scene 
 def initLoadExt():
-   Omega().load('DE_ext_Msh2.yade.gz')
+   Omega().load(DE_ext)
    return Omega().sceneToString()
 
 # load exterior DE domain scene and return boundary force
@@ -209,7 +212,7 @@ def getScenetDt(scene):
 def initLoad(ID=0): # where ID identifies the Gauss point location
    if 1:
       # All Gauss points import 'DE_int.yade.gz' resulting in a uniform sample (default)
-      Omega().load('DE_int.yade.gz')
+      Omega().load(DE_int)
    else:
       # Otherwise load different packings to generate random field
       # resulting in an inherently heterogeneous sample
