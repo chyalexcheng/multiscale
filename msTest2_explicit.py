@@ -17,7 +17,7 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # read Gmsh mesh with 6-node triangle element (8 tri6); each element has 4 Gauss points
-mshName = 'Msh3'; numOfElements = 32
+mshName = 'Msh2'; numOfElements = 32
 # number of Gauss points
 gp = 1; numg = gp*numOfElements;
 packNo=range(0,numg)
@@ -29,13 +29,8 @@ nump = 32
 safe = 4.0; duration = 25
 # import membrane node Ids in exterior DE domain
 sceneExt ='./DE_exts/Test2/'
-mIds = numpy.load(sceneExt+'mNodesIds'+mshName+'.npy')
 # import FE-DE boundary node mapping
 FEDENodeMap = numpy.load(sceneExt+'FEDENodeMap'+mshName+'.npy').item()
-# import FE-DE boundary element mapping
-FEDEBoundMap = numpy.load(sceneExt+'FEDEBoundMap'+mshName+'.npy').item()
-# boundary pressure on DE membrane
-conf = 0
 # surcharnge pressure
 surcharge=-2.e4
 # open file to write force on the top surface with its length
@@ -47,8 +42,8 @@ fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'.dat','w')
 ###################
 
 # multiscale model description
-prob = MultiScale(mshName=mshName,dim=dim,ng=numg,np=nump,rho=rho,mIds=mIds,\
-						FEDENodeMap=FEDENodeMap,FEDEBoundMap=FEDEBoundMap,conf=conf)
+prob = MultiScale(mshName=mshName,dim=dim,ng=numg,np=nump,rho=rho,\
+						FEDENodeMap=FEDENodeMap)
 
 # nodal coordinate
 dom = prob.getDomain()
@@ -62,7 +57,7 @@ Dbc = whereZero(x[0])*[1,0] + whereZero(x[0]-lx)*[1,0]
 Dbc_val = whereZero(x[0])*[0,0] + whereZero(x[0]-lx)*[0,0]
 
 # Neumann BC postions, known pressure on the top
-Nbc = whereZero(x[1]-ly)*[0,surcharge]
+Nbc = whereZero(bx[1]-ly)*[0,surcharge]
 
 ######################
 ##  Initialization  ##

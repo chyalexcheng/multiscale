@@ -214,6 +214,9 @@ class MultiScale(object):
             rhs_i = rhs.getTupleForDataPoint(FEid)
             rhs_i_new = [sum(f) for f in zip(rhs_i,FEf[FEid])]
             rhs.setValueOfDataPoint(FEid,rhs_i_new)
+      # consider Neumann boundary conditions
+      rhs -= rhs*self.__pde.getCoefficient('q')
+
       """
       # !!!!!! apply boundary traction to the right hand side of PDE (deprecated)
          self.__pde.setValue(X=X, Y=Y, y=self.__Nbc)

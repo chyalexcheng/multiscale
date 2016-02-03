@@ -17,7 +17,7 @@ lx = 1.2; ly = 1.2
 # initial pressure on membrane from soil
 pressure = -2.e4
 # pulling speed on ends of DE membrane
-pullSpeed = -1.e-2
+pullSpeed = 1.e-2
 # type of membrane material
 GSType = 'PP'
 color = [84./255,89./255,109./255]
@@ -29,10 +29,11 @@ rGrid = 5.e-3
 # discretization per cylinder (change this when mesh changes)
 L = .3; nL = 0
 if not nL: nL = int(L/(2.*rGrid))
+rGrid = 1.e-3
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0
 # density
-dScaling = 1e0
+dScaling = 1e3
 rho = dScaling*443.96
 
 # tensile modulus of membrane material
@@ -58,8 +59,8 @@ E_i = 0.   ; v_i = 0.; phi_i = 0.; sigTmax_i = sigTmax; sigSmax_i = sigTmax
 
 ## material parameters for external behavior
 # m2i: membrane-interface
-#~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(34)
-E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
+E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(34)
+#~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
 
 #################
 ##  Functions  ##
@@ -167,7 +168,7 @@ O.engines=[
        Law2_GridCoGridCoGeom_FrictPhys_CundallStrack(),
        ]
    ),
-   NewtonIntegrator(gravity=(0,0,0),damping=damp,label='newton')
+   NewtonIntegrator(gravity=(0,0,0),damping=damp)
 ]
 
 #################
@@ -238,7 +239,7 @@ mNodesIds = antiClockSort(mNodesIds,startPos,coordC)
 for i,j in zip(mNodesIds[:-1],mNodesIds[1:]):
    O.bodies.append(gridConnection(i,j,rGrid,wire=True,material='m2iMat',color=[0.,1.,0.]))
 # block z-direction translational and rotational DOFs of membrane nodes
-for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'zXYZ'
+for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'xzXYZ'
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ##  estimate size of timestep       ##
@@ -261,13 +262,39 @@ O.bodies.append(gridConnection(ends[0],ends[1],rGrid,wire=True,material='walMat'
 
 # apply initial force on membrane
 f = Vector3(0,pressure*lx/len(iBodiesIds)*width,0)
-for i in iNodesIds:
+O.engines[-1].damping = 0.99
+for i in iNodesIds[1:-1]:
 	# add permanent force on interface nodes
-	O.forces.addF(i,2*f,True)
+	O.forces.addF(i,f,True)
 	O.bodies[i].state.blockedDOFs = 'xzXYZ'
+for i in [iNodesIds[0],iNodesIds[-1]]:
+	# add permanent force on interface nodes
+	O.forces.addF(i,.5*f,True)
+	O.bodies[i].state.blockedDOFs = 'xzXYZ'
+# wait till simulation stablized
+while 1:
+	calm(); O.run(10000,True)
+	if kineticEnergy()<1e-5:
+		break
 
-#~ O.bodies[ends[1]].state.vel = Vector3(pullSpeed,0,0)
-#~ 
-#~ # save exterior DE scene
-#~ qt.Renderer().bgColor = color
-#~ O.save('./DE_exts/Test2/DE_ext_'+mshName+'.yade.gz')
+# fix interface nodes
+for i in iNodesIds: O.bodies[i].state.blockedDOFs = 'xyzXYZ'
+# free x direction DOF of membrane Nodes
+for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'zXYZ'
+# reset forces and kinematics of all bodies
+O.forces.reset()
+for b in O.bodies:
+	b.state.vel = Vector3.Zero
+	b.state.angVel = Vector3.Zero
+	b.state.refPos = b.state.pos
+	b.state.refOri = b.state.ori
+# set damping to normal level
+O.engines[-1].damping = 0.2
+
+# apply pull-out
+O.bodies[mNodesIds[-1]].state.vel = Vector3(pullSpeed,0,0)
+O.bodies[mNodesIds[-1]].state.blockedDOFs = 'xyzXYZ'
+
+# save exterior DE scene
+qt.Renderer().bgColor = color
+O.save('./DE_exts/Test2/DE_ext_'+mshName+'.yade.gz')
