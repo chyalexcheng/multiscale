@@ -17,26 +17,29 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # read Gmsh mesh with 6-node triangle element (8 tri6); each element has 4 Gauss points
-mshName = 'Msh4'; numOfElements = 128
+mshName = 'Msh3'; numOfElements = 32
 # number of Gauss points
 gp = 1; numg = gp*numOfElements;
 packNo=range(0,numg)
 # density and damping ratio
 rho = 2254.; damp = .2
 # number of processes in multiprocessing
-nump = 64
+nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 2.0; duration = 25
+safe = 4.0; duration = 25
 # import membrane node Ids in exterior DE domain
-mIds = numpy.load('mNodesIds'+mshName+'.npy')
+sceneExt ='./DE_exts/Test2/'
+mIds = numpy.load(sceneExt+'mNodesIds'+mshName+'.npy')
 # import FE-DE boundary node mapping
-FEDENodeMap = numpy.load('FEDENodeMap'+mshName+'.npy').item()
+FEDENodeMap = numpy.load(sceneExt+'FEDENodeMap'+mshName+'.npy').item()
 # import FE-DE boundary element mapping
-FEDEBoundMap = numpy.load('FEDEBoundMap'+mshName+'.npy').item()
+FEDEBoundMap = numpy.load(sceneExt+'FEDEBoundMap'+mshName+'.npy').item()
 # boundary pressure on DE membrane
 conf = 0
+# surcharnge pressure
+surcharge=-2.e4
 # open file to write force on the top surface with its length
-graphDir = './result/graphs/msTest1_Explicit/gp'+str(gp)+'/'
+graphDir = './result/graphs/msTest2_Explicit/gp'+str(gp)+'/'
 fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'.dat','w')
 
 ###################
@@ -52,15 +55,14 @@ dom = prob.getDomain()
 x = dom.getX()
 bx = FunctionOnBoundary(dom).getX()
 
-# Dirichlet BC positions, fixed four corners
-Dbc = whereZero(x[0])*whereZero(x[1])*[1,1] +\
-		whereZero(x[0]-lx)*whereZero(x[1])*[1,1] +\
-		whereZero(x[1])*[0,1]
+# Dirichlet BC positions, smooth lateral boundary
+Dbc = whereZero(x[0])*[1,0] + whereZero(x[0]-lx)*[1,0]
 
 # Dirichlet BC values
-Dbc_val = whereZero(x[0])*whereZero(x[1])*[0,0] +\
-			 whereZero(x[0]-lx)*whereZero(x[1])*[0,0] +\
-			 whereZero(x[1])*[0,0]
+Dbc_val = whereZero(x[0])*[0,0] + whereZero(x[0]-lx)*[0,0]
+
+# Neumann BC postions, known pressure on the top
+Nbc = whereZero(x[1]-ly)*[0,surcharge]
 
 ######################
 ##  Initialization  ##
@@ -76,7 +78,7 @@ dt = safe*(2./eigFreq)
 #~ dt = safe*inf(prob.getDomain().getSize()/PwaveVel)
 
 # initialize partial difference equation and return timestep
-prob.initialize(specified_u_mask=Dbc, specified_u_val=Dbc_val, dt=dt)
+prob.initialize(f=Nbc, specified_u_mask=Dbc, specified_u_val=Dbc_val, dt=dt)
 
 ########################################
 ##  Run simulations for nt timesteps  ##
@@ -87,7 +89,7 @@ time_start = time.time()
 t = 1
 nt = int(duration/dt)
 # directory to export vtk data and packing scenes
-Dir = 'msTest1/explicit/gp'+str(gp)+'/'+mshName+'/'
+Dir = 'msTest2/explicit/gp'+str(gp)+'/'+mshName+'/'
 vtkDir = './result/vtk/'+Dir
 packDir = './result/packing/'+Dir
 

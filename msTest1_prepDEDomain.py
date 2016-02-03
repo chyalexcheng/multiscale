@@ -11,7 +11,7 @@ import numpy as np
 #####################
 
 # mesh file name
-mshName = 'Msh2'
+mshName = 'Msh4'
 # sample size, 1.2m by 1.2m
 lx = 1.2; ly = 1.2
 # confining pressure
@@ -26,8 +26,8 @@ damp = 0.2
 width = 0.1
 # assumed radius
 rGrid = 5.e-3
-# discretization per cylinder
-L = .3; nL = 0
+# discretization per cylinder (change this when mesh changes)
+L = .15; nL = 0
 if not nL: nL = int(L/(2.*rGrid))
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0
@@ -224,8 +224,8 @@ for key in bRefIDs: bRefIDs[key] += dID
 
 # create all GridNodes first
 mNodesIds = []
-# primary nodes adjacent to interface nodes
-for i in iNodesIds[4:]+[iNodesIds[0]]:
+# primary nodes adjacent to interface nodes (change this when mesh changes)
+for i in iNodesIds[8:]+[iNodesIds[0]]:
    i1,i2 = O.interactions.withBody(i)
    # create membrane nodes without overlap with interface nodes
    n1 = i1.geom.normal; n2 = i2.geom.normal
@@ -300,11 +300,12 @@ if pullSpeed:
 			gridNode(pos1,rGrid,wire=True,fixed=True,material='iMat',color=[0.,0.,1.]))
 		O.bodies.append(gridConnection(id0,id1,rGrid,wire=True,material='walMat',color=[0.,0.,1.]))
 
+# initial run for contact between top nodes and membrane body (change this when mesh changes)
 while 1:
 	O.run(100,True)
-	if O.forces.f(8).norm() > 1e-2:
+	if O.forces.f(16).norm() > 1e-2:
 			break
 
 # save exterior DE scene
 qt.Renderer().bgColor = color
-O.save('DE_ext_32threads.yade.gz')
+O.save('DE_ext_'+mshName+'.yade.gz')

@@ -33,7 +33,7 @@ def get_pool(mpi=False,threads=1):
          sys.exit(0)
    elif threads>1: # using multiprocessing
       from multiprocessing import Pool
-      pool = Pool(processes=threads,maxtasksperchild=1000)
+      pool = Pool(processes=threads,maxtasksperchild=10000)
    else:
       raise RuntimeError,"Wrong arguments: either mpi=True or threads>1."
    return pool
