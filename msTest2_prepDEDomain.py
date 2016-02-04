@@ -251,6 +251,7 @@ for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'xzXYZ'
 O.dt = utils.PWaveTimeStep()
 print O.dt
 np.save('./DE_exts/Test2/FEDENodeMap'+mshName+'.npy',nodeIDs)
+np.save('./DE_exts/Test2/mNodesIds'+mshName+'.npy',mNodesIds)
 
 # create bottom boundary platen
 ends = [mNodesIds[0],mNodesIds[-1]]

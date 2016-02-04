@@ -27,8 +27,10 @@ rho = 2254.; damp = .2
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
 safe = 4.0; duration = 25
-# import membrane node Ids in exterior DE domain
+# directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test2/'
+# import membrane node Ids in exterior DE domain
+mIds = numpy.load(sceneExt+'mNodesIds'+mshName+'.npy')
 # import FE-DE boundary node mapping
 FEDENodeMap = numpy.load(sceneExt+'FEDENodeMap'+mshName+'.npy').item()
 # surcharnge pressure
@@ -43,7 +45,7 @@ fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'.dat','w')
 
 # multiscale model description
 prob = MultiScale(mshName=mshName,dim=dim,ng=numg,np=nump,rho=rho,\
-						FEDENodeMap=FEDENodeMap)
+						mIds=mIds,FEDENodeMap=FEDENodeMap)
 
 # nodal coordinate
 dom = prob.getDomain()
@@ -104,36 +106,35 @@ while t <= nt:
       # compute boundary traction by s_ij*n_j
       traction = matrix_mult(sig_bounda,dom.getNormal())
       # get mask for boundary nodes on bottom surface
-      bottomSurf = whereZero(bx[1])
+      topSurf = whereZero(bx[1]-ly)
       # traction at bottom surface
-      tractBottom = traction*bottomSurf
+      tractBottom = traction*topSurf
       # resultant force at bottom
       forceBottom = integrate(tractBottom,where=FunctionOnBoundary(dom))
       # length of bottom surface
-      lengthBottom = integrate(bottomSurf,where=FunctionOnBoundary(dom))
-      # force magnitude
-      magForceBottom = sqrt(forceBottom.dot(forceBottom))
+      lengthBottom = integrate(topSurf,where=FunctionOnBoundary(dom))
       # write stress on the bottom
-      fout.write(str(t*dt)+' '+str(magForceBottom)+' '+str(lengthBottom)+'\n')      
-      # get local void ratio
-      vR=prob.getLocalVoidRatio()
+      fout.write(str(t*dt)+' '+str(forceBottom[0])+' '+str(forceBottom[1])+' '+str(lengthBottom)+'\n')      
+      #~ # get local void ratio
+      #~ vR=prob.getLocalVoidRatio()
       #~ # get local fabric intensity
       #~ fabric=prob.getLocalFabric()
       #~ iso_fabric = trace(fabric)
       #~ aniso_fabric = symmetric(fabric) - iso_fabric*kronecker(prob.getDomain())/dim
       #~ aniso = sqrt(1./2*inner(aniso_fabric,aniso_fabric))
-      # get local rotation
-      rotation=prob.getLocalAvgRotation()
-      # get local shear strain
-      strain = prob.getCurrentStrain()
-      volume_strain = trace(strain)
-      dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
-      shear = sqrt(2*inner(dev_strain,dev_strain))
+      #~ # get local rotation
+      #~ rotation=prob.getLocalAvgRotation()
+      #~ # get local shear strain
+      #~ strain = prob.getCurrentStrain()
+      #~ volume_strain = trace(strain)
+      #~ dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
+      #~ shear = sqrt(2*inner(dev_strain,dev_strain))
       # export FE scene
-      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rotation)
+      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig)
+      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rotation)
       # export DE scene
       prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
-      print "force at bottom: %e"%magForceBottom
+      print "stress ratio at bottom: %e"%(forceBottom[0]/forceBottom[1])
    # next iteration
    print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt,L2(u_t))
    t += 1
