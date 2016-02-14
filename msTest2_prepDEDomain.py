@@ -183,8 +183,6 @@ O.materials.append(CohFrictMat(young=E_m,poisson=v_m,density=rho,frictionAngle=p
    ,normalCohesion=sigTmax_m,shearCohesion=sigSmax_m,momentRotationLaw=False,label='mMat'))
 # membrane to interface
 O.materials.append(FrictMat(young=E_m2i,poisson=v_m2i,density=rho,frictionAngle=phi_m2i,label='m2iMat'))
-# boundary wall
-O.materials.append(FrictMat(young=E_m2i,poisson=v_m2i,density=rho,frictionAngle=0,label='walMat'))
 
 ###################
 ##  Build model  ##
@@ -258,8 +256,8 @@ ends = [mNodesIds[0],mNodesIds[-1]]
 for i in range(2):
 	pos = O.bodies[ends[i]].state.pos-Vector3(0,2.*rGrid,0)
 	ends[i] = O.bodies.append(
-		gridNode(pos,rGrid,wire=True,fixed=True,material='iMat',color=[0.,0.,1.]))
-O.bodies.append(gridConnection(ends[0],ends[1],rGrid,wire=True,material='walMat',color=[0.,0.,1.]))
+		gridNode(pos,rGrid,wire=True,fixed=True,material='iMat',color=[1.,1.,0.]))
+O.bodies.append(gridConnection(ends[0],ends[1],rGrid,wire=True,material='m2iMat',color=[1.,1.,0.]))
 
 # apply initial force on membrane
 f = Vector3(0,pressure*lx/len(iBodiesIds)*width,0)
@@ -281,7 +279,7 @@ while 1:
 # fix interface nodes
 for i in iNodesIds: O.bodies[i].state.blockedDOFs = 'xyzXYZ'
 # free x direction DOF of membrane Nodes
-for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'zXYZ'
+for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'yzXYZ'
 # reset forces and kinematics of all bodies
 O.forces.reset()
 for b in O.bodies:
