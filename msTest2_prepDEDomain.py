@@ -29,11 +29,10 @@ rGrid = 5.e-3
 # discretization per cylinder (change this when mesh changes)
 L = .3; nL = 0
 if not nL: nL = int(L/(2.*rGrid))
-rGrid = 1.e-3
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0
 # density
-dScaling = 1e3
+dScaling = 1e0
 rho = dScaling*443.96
 
 # tensile modulus of membrane material
@@ -183,6 +182,8 @@ O.materials.append(CohFrictMat(young=E_m,poisson=v_m,density=rho,frictionAngle=p
    ,normalCohesion=sigTmax_m,shearCohesion=sigSmax_m,momentRotationLaw=False,label='mMat'))
 # membrane to interface
 O.materials.append(FrictMat(young=E_m2i,poisson=v_m2i,density=rho,frictionAngle=phi_m2i,label='m2iMat'))
+# boundary wall
+O.materials.append(FrictMat(young=E_m2i,poisson=v_m2i,density=rho,frictionAngle=0,label='walMat'))
 
 ###################
 ##  Build model  ##
@@ -256,8 +257,8 @@ ends = [mNodesIds[0],mNodesIds[-1]]
 for i in range(2):
 	pos = O.bodies[ends[i]].state.pos-Vector3(0,2.*rGrid,0)
 	ends[i] = O.bodies.append(
-		gridNode(pos,rGrid,wire=True,fixed=True,material='iMat',color=[1.,1.,0.]))
-O.bodies.append(gridConnection(ends[0],ends[1],rGrid,wire=True,material='m2iMat',color=[1.,1.,0.]))
+		gridNode(pos,rGrid,wire=True,fixed=True,material='iMat',color=[0.,0.,1.]))
+O.bodies.append(gridConnection(ends[0],ends[1],rGrid,wire=True,material='walMat',color=[0.,0.,1.]))
 
 # apply initial force on membrane
 f = Vector3(0,pressure*lx/len(iBodiesIds)*width,0)
@@ -279,7 +280,7 @@ while 1:
 # fix interface nodes
 for i in iNodesIds: O.bodies[i].state.blockedDOFs = 'xyzXYZ'
 # free x direction DOF of membrane Nodes
-for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'yzXYZ'
+for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'zXYZ'
 # reset forces and kinematics of all bodies
 O.forces.reset()
 for b in O.bodies:
@@ -288,7 +289,7 @@ for b in O.bodies:
 	b.state.refPos = b.state.pos
 	b.state.refOri = b.state.ori
 # set damping to normal level
-O.engines[-1].damping = 0.2
+O.engines[-1].damping = 0.9
 
 # apply pull-out
 O.bodies[mNodesIds[-1]].state.vel = Vector3(pullSpeed,0,0)

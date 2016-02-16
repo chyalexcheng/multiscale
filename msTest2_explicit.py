@@ -26,7 +26,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 4.0; duration = 25
+safe = 2.0; duration = 25
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test2/'
 # import membrane node Ids in exterior DE domain
@@ -108,30 +108,30 @@ while t <= nt:
       # get mask for boundary nodes on bottom surface
       topSurf = whereZero(bx[1]-ly)
       # traction at bottom surface
-      tractBottom = traction*topSurf
+      tractTop = traction*topSurf
       # resultant force at bottom
-      forceBottom = integrate(tractBottom,where=FunctionOnBoundary(dom))
+      forceTop = integrate(tractTop,where=FunctionOnBoundary(dom))
       # length of bottom surface
-      lengthBottom = integrate(topSurf,where=FunctionOnBoundary(dom))
+      lengthTop = integrate(topSurf,where=FunctionOnBoundary(dom))
       # write stress on the bottom
-      fout.write(str(t*dt)+' '+str(forceBottom[0])+' '+str(forceBottom[1])+' '+str(lengthBottom)+'\n')      
-      #~ # get local void ratio
-      #~ vR=prob.getLocalVoidRatio()
+      fout.write(str(t*dt)+' '+str(forceTop[0])+' '+str(forceTop[1])+' '+str(lengthTop)+'\n')      
+      # get local void ratio
+      vR=prob.getLocalVoidRatio()
       #~ # get local fabric intensity
       #~ fabric=prob.getLocalFabric()
       #~ iso_fabric = trace(fabric)
       #~ aniso_fabric = symmetric(fabric) - iso_fabric*kronecker(prob.getDomain())/dim
       #~ aniso = sqrt(1./2*inner(aniso_fabric,aniso_fabric))
-      #~ # get local rotation
-      #~ rotation=prob.getLocalAvgRotation()
-      #~ # get local shear strain
-      #~ strain = prob.getCurrentStrain()
-      #~ volume_strain = trace(strain)
-      #~ dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
-      #~ shear = sqrt(2*inner(dev_strain,dev_strain))
+      # get local rotation
+      rotation=prob.getLocalAvgRotation()
+      # get local shear strain
+      strain = prob.getCurrentStrain()
+      volume_strain = trace(strain)
+      dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
+      shear = sqrt(2*inner(dev_strain,dev_strain))
       # export FE scene
-      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig)
-      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rotation)
+      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig)
+      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rotation)
       # export DE scene
       prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
       print "stress ratio at bottom: %e"%(forceBottom[0]/forceBottom[1])
