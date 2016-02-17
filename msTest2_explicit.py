@@ -134,7 +134,7 @@ while t <= nt:
       saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rotation)
       # export DE scene
       prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
-      print "stress ratio at bottom: %e"%(forceBottom[0]/forceBottom[1])
+      print "stress ratio at bottom: %e"%(forceTop[0]/forceTop[1])
    # next iteration
    print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt,L2(u_t))
    t += 1

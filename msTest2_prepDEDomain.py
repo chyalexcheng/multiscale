@@ -289,7 +289,7 @@ for b in O.bodies:
 	b.state.refPos = b.state.pos
 	b.state.refOri = b.state.ori
 # set damping to normal level
-O.engines[-1].damping = 0.9
+O.engines[-1].damping = 0.2
 
 # apply pull-out
 O.bodies[mNodesIds[-1]].state.vel = Vector3(pullSpeed,0,0)
