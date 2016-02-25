@@ -16,7 +16,7 @@ import time
 
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
-# read Gmsh mesh with 6-node triangle element (8 tri6); each element has 4 Gauss points
+# read Gmsh mesh with 3-node triangle element; each element has 1 Gauss point
 mshName = 'Msh2'; numOfElements = 32
 # number of Gauss points
 gp = 1; numg = gp*numOfElements;
@@ -35,9 +35,9 @@ mIds = numpy.load(sceneExt+'mNodesIds'+mshName+'.npy')
 FEDENodeMap = numpy.load(sceneExt+'FEDENodeMap'+mshName+'.npy').item()
 # surcharnge pressure
 surcharge=-2.e4
-# open file to write force on the top surface with its length
+# open file to write force on the bottom surface with its length
 graphDir = './result/graphs/msTest2_Explicit/gp'+str(gp)+'/'
-fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'.dat','w')
+fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'_DEdamp_0.2.dat','w')
 
 ###################
 ##  model setup  ##
@@ -76,6 +76,10 @@ dt = safe*(2./eigFreq)
 
 # initialize partial difference equation and return timestep
 prob.initialize(f=Nbc, specified_u_mask=Dbc, specified_u_val=Dbc_val, dt=dt)
+prob.closePool()
+
+# revive working pool
+prob.createPool()
 
 ########################################
 ##  Run simulations for nt timesteps  ##
@@ -106,37 +110,38 @@ while t <= nt:
       # compute boundary traction by s_ij*n_j
       traction = matrix_mult(sig_bounda,dom.getNormal())
       # get mask for boundary nodes on bottom surface
-      topSurf = whereZero(bx[1]-ly)
+      botSurf = whereZero(bx[1])
       # traction at bottom surface
-      tractTop = traction*topSurf
+      tractBot = traction*botSurf
       # resultant force at bottom
-      forceTop = integrate(tractTop,where=FunctionOnBoundary(dom))
+      forceBot = integrate(tractBot,where=FunctionOnBoundary(dom))
       # length of bottom surface
-      lengthTop = integrate(topSurf,where=FunctionOnBoundary(dom))
+      lengthBot = integrate(botSurf,where=FunctionOnBoundary(dom))
       # write stress on the bottom
-      fout.write(str(t*dt)+' '+str(forceTop[0])+' '+str(forceTop[1])+' '+str(lengthTop)+'\n')      
-      # get local void ratio
-      vR=prob.getLocalVoidRatio()
+      fout.write(str(t*dt)+' '+str(forceBot[0])+' '+str(forceBot[1])+' '+str(lengthBot)+'\n')
+      
+      #~ # get local void ratio
+      #~ vR=prob.getLocalVoidRatio()
       #~ # get local fabric intensity
       #~ fabric=prob.getLocalFabric()
       #~ iso_fabric = trace(fabric)
       #~ aniso_fabric = symmetric(fabric) - iso_fabric*kronecker(prob.getDomain())/dim
       #~ aniso = sqrt(1./2*inner(aniso_fabric,aniso_fabric))
-      # get local rotation
-      rotation=prob.getLocalAvgRotation()
-      # get local shear strain
-      strain = prob.getCurrentStrain()
-      volume_strain = trace(strain)
-      dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
-      shear = sqrt(2*inner(dev_strain,dev_strain))
-      # export FE scene
-      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig)
-      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rotation)
-      # export DE scene
-      prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
-      print "stress ratio at bottom: %e"%(forceTop[0]/forceTop[1])
+      #~ # get local rotation
+      #~ rotation=prob.getLocalAvgRotation()
+      #~ # get local shear strain
+      #~ strain = prob.getCurrentStrain()
+      #~ volume_strain = trace(strain)
+      #~ dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
+      #~ shear = sqrt(2*inner(dev_strain,dev_strain))
+      #~ # export FE scene
+      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rotation)
+      #~ # export DE scene
+      #~ prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
+      
+      print "stress ratio at bottom: %e"%(forceBot[0]/forceBot[1])
    # next iteration
-   print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt,L2(u_t))
+   print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt)
    t += 1
 
 prob.getCurrentPacking(pos=(),time=t,prefix=packDir)

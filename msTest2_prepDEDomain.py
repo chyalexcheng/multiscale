@@ -27,7 +27,7 @@ width = 0.1
 # assumed radius
 rGrid = 5.e-3
 # discretization per cylinder (change this when mesh changes)
-L = .3; nL = 0
+L = 0.3; nL = 0
 if not nL: nL = int(L/(2.*rGrid))
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0
@@ -273,7 +273,7 @@ for i in [iNodesIds[0],iNodesIds[-1]]:
 	O.bodies[i].state.blockedDOFs = 'xzXYZ'
 # wait till simulation stablized
 while 1:
-	calm(); O.run(10000,True)
+	calm(); O.run(20000,True)
 	if kineticEnergy()<1e-5:
 		break
 
@@ -289,7 +289,7 @@ for b in O.bodies:
 	b.state.refPos = b.state.pos
 	b.state.refOri = b.state.ori
 # set damping to normal level
-O.engines[-1].damping = 0.2
+O.engines[-1].damping = damp
 
 # apply pull-out
 O.bodies[mNodesIds[-1]].state.vel = Vector3(pullSpeed,0,0)
