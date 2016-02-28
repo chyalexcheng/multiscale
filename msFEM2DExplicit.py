@@ -24,7 +24,7 @@ from scipy.sparse.linalg import eigs
     supporting both MPI (experimental) on distributed
     memory and multiprocessing on shared memory.
 """
-def get_pool(mpi=False,threads=1,ng=1):
+def get_pool(mpi=False,threads=1):
    if mpi: # using MPI
       from mpipool import MPIPool
       pool = MPIPool()
@@ -33,8 +33,7 @@ def get_pool(mpi=False,threads=1,ng=1):
          sys.exit(0)
    elif threads>1: # using multiprocessing
       from multiprocessing import Pool
-      # maxtasksperchild = 5000 steps * number of calls (2*ng+1) per step
-      pool = Pool(processes=threads,maxtasksperchild=5000*(2*ng+1))
+      pool = Pool(processes=threads,maxtasksperchild=10000)
    else:
       raise RuntimeError,"Wrong arguments: either mpi=True or threads>1."
    return pool
@@ -74,13 +73,12 @@ class MultiScale(object):
       self.__pde.getSolverOptions().setSolverMethod(SolverOptions.HRZ_LUMPING)
       self.__pde.setSymmetryOn()
       self.__numGaussPoints=ng
-      self.__numProcesses=np
       self.__rho=rho
       self.__mIds=mIds
       self.__FEDENodeMap=FEDENodeMap
       self.__FEDEBoundMap=FEDEBoundMap
       self.__conf=conf
-      self.__pool=get_pool(mpi=useMPI,threads=np,ng=ng)
+      self.__pool=get_pool(mpi=useMPI,threads=np)
       self.__scenes=self.__pool.map(initLoad,range(ng))
       self.__strain=escript.Tensor(0,escript.Function(self.__domain))
       self.__stress=escript.Tensor(0,escript.Function(self.__domain))
@@ -192,17 +190,10 @@ class MultiScale(object):
       """
       return self.__strain
    
-   def createPool(self):
-      """create working pool"""
-      self.__pool = get_pool(threads=self.__numProcesses,ng=self.__numGaussPoints)
-         
-   def closePool(self):
-      """close working pool"""
+   def exitSimulation(self):
+      """finish the whole simulation, exit"""
       self.__pool.close()
 
-   def getPool(self):
-      return self.__pool
-      
 ## below is modified by Hongyang Cheng ##
 
    def setRHS(self,X,Y=escript.Data()):
@@ -322,10 +313,11 @@ class MultiScale(object):
    
    def VTKExporter(self,vtkDir='./',t=0):
       """
-      export exterior DE scene in vtk format
+      export interactions in all DE scenes using vtk format
       """
-      return exportVTK(self.__sceneExt,self.__mIds,vtkDir,t)
-      
+      self.__pool.map(exportInt,zip(self.__scenes,repeat(vtkDir),repeat(t)))
+      self.__pool.apply(exportExt,(self.__sceneExt,self.__mIds,vtkDir,t))
+                    
    def getPDE(self):
       """
       return partial differential equation
@@ -420,7 +412,7 @@ class MultiScale(object):
       # convert discrete reference IDs to continous numbers
       num = bfs.getX().getNumberOfDataPoints()
       FEDEBoundMap = {}; n = 0
-      for i in range(num):
+      for i in xrange(num):
          refID = bfs.getReferenceIDFromDataPointNo(i)
          if n != refID: newID = 2*(refID-1)
          else: newID = 2*(refID-1)+1

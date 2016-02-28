@@ -11,7 +11,7 @@ import numpy as np
 #####################
 
 # mesh file name
-mshName = 'Msh2'
+mshName = 'Msh5'
 # sample size, 1.2m by 1.2m
 lx = 1.2; ly = 1.2
 # initial pressure on membrane from soil
@@ -22,12 +22,12 @@ pullSpeed = 1.e-2
 GSType = 'PP'
 color = [84./255,89./255,109./255]
 # global damping
-damp = 0.2
+damp = 0.4
 width = 0.1
 # assumed radius
 rGrid = 5.e-3
 # discretization per cylinder (change this when mesh changes)
-L = 0.3; nL = 0
+L = 0.12; nL = 0
 if not nL: nL = int(L/(2.*rGrid))
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0

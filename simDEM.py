@@ -26,7 +26,7 @@ from yade import export
 ### Below is added for surface coupling by Hongyang Cheng ###
 
 DE_int = './DE_exts/Test2/DE_alum.yade.gz'
-DE_ext = './DE_exts/Test2/DE_ext_Msh2.yade.gz'
+DE_ext = './DE_exts/Test2/DE_ext_Msh5.yade.gz'
 
 # load exterior DE domain scene 
 def initLoadExt():
@@ -182,11 +182,23 @@ def getBoundaryForce(FEDENodeMap,width=0.1):
       FEf[key] = (f[0]/width,f[1]/width)
    #~ print max(FEf.values())
    return FEf
+ 
+# export interior DE scene in vtk format
+def exportInt(params):
+   scene = params[0]; vtkDir = params[1]; t = params[2]
+   Omega().stringToScene(scene)
+   pos = Omega().tags['id']
+   sIntrs = export.VTKExporter(vtkDir+'int_'+pos)
+   sIntrs.exportInteractions(
+   numLabel=t,
+      what=[('f_n','i.phys.normalForce.norm()'),
+            ('f_s','i.phys.shearForce.norm()'),
+           ])
   
 # export exterior DE scene in vtk format
-def exportVTK(scene,mIds,vtkDir,t):
+def exportExt(scene,mIds,vtkDir,t):
    Omega().stringToScene(scene)
-   mIntrs=export.VTKExporter(vtkDir)
+   mIntrs=export.VTKExporter(vtkDir+'ext_')
    mIntrs.exportInteractions(
    numLabel=t,
       ids=[(i,j) for i,j in zip(mIds[:-1],mIds[1:])],
