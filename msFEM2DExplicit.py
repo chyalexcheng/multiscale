@@ -263,9 +263,10 @@ class MultiScale(object):
       # if external DE scene presents, update scene and boundary force.
       if self.__FEDENodeMap:
          self.__FEf,self.__sceneExt = arFEfAndSceneExt.get()
-      # update internal DE scenes and assign new stresses to gauss points
-      scenes = arScenes.get()
-      s = self.__pool.map(getStress2D,scenes)
+      # update interior DE scenes
+      self.__scenes = arScenes.get()
+      # assign new stresses to gauss points from interior DE scenes
+      s = self.__pool.map(getStress2D,self.__scenes)
       for i in xrange(self.__numGaussPoints):
          self.__stress.setValueOfDataPoint(i,s[i])
       return self.__u, self.__u_t
