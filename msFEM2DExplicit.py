@@ -248,8 +248,8 @@ class MultiScale(object):
       # update displacement and domain geometry at (n+1) time step
       self.__u += du
       self.__domain.setX(x+du)
-      # !!!!!! update stress and scenes from DEM part using strain at (n+1) time step
-      self.__stress,self.__scenes = self.applyStrain_getStressDEM(st=D)
+      # !!!!!! update scenes from DEM part using strain at (n+1) time step
+      arScenes = self.applyStrain(st=D)
       # !!!!!! apply displacement increment and get boundary force from DE exterior domain, if any
       if self.__FEDENodeMap:
          DEdu = self.getBoundaryDisplacement(du)
@@ -258,24 +258,27 @@ class MultiScale(object):
          self.__Nbc,self.__sceneExt=self.applyDisplIncrement_getTractionDEM(DEdu=DEdu)
          """
          # apply boundary velocity and get boundary force      
-         self.__FEf,self.__sceneExt=self.applyDisplIncrement_getForceDEM(DEdu=DEdu)
-      return self.__u, self.__u_t
-      
-   """
-   apply strain to DEM packing, and get stress
-   """
-   def applyStrain_getStressDEM(self,st=escript.Data()):
-      st = st.toListOfTuples()
-      st = numpy.array(st).reshape(-1,4)
-      stress = escript.Tensor(0,escript.Function(self.__domain))
-      # load DEM packing with strain
-      #~ scenes = self.__pool.map(shear2D,zip(self.__scenes,st))
-      scenes = self.__pool.map(shear2D,zip(self.__scenes,st,self.__nsOfDE_int))
-      # return homogenized stress
+         arFEfAndSceneExt=self.applyDisplIncrement_getForceDEM(DEdu=DEdu)
+		# !!!!!! retrieve data from asyncResults
+      # if external DE scene presents, update scene and boundary force.
+      if self.__FEDENodeMap:
+         self.__FEf,self.__sceneExt = arFEfAndSceneExt.get()
+      # update internal DE scenes and assign new stresses to gauss points
+      scenes = arScenes.get()
       s = self.__pool.map(getStress2D,scenes)
       for i in xrange(self.__numGaussPoints):
-         stress.setValueOfDataPoint(i,s[i])
-      return stress,scenes
+         self.__stress.setValueOfDataPoint(i,s[i])
+      return self.__u, self.__u_t
+            
+   """
+   apply strain to DEM packing
+   """
+   def applyStrain(self,st=escript.Data()):
+      st = st.toListOfTuples()
+      st = numpy.array(st).reshape(-1,4)
+      # load DEM packing with strain
+      arScenes = self.__pool.map_async(shear2D,zip(self.__scenes,st,self.__nsOfDE_int))
+      return arScenes
 
    def applyDisplIncrement_getTractionDEM(self,DEdu=escript.Data()):
       """
@@ -295,10 +298,10 @@ class MultiScale(object):
       apply displacement increment to DEM packing in the exterior domain,
       and get boundary force from DE interface nodes
       """
-      FEf, sceneExt = self.__pool.apply( \
-                        moveInterface_getForce2D,(self.__sceneExt,self.__conf,DEdu, \
-                        self.__mIds,self.__FEDENodeMap,self.__nsOfDE_ext))
-      return FEf, sceneExt
+      arFEfAndSceneExt = self.__pool.apply_async( \
+                            moveInterface_getForce2D,(self.__sceneExt,self.__conf,DEdu, \
+                            self.__mIds,self.__FEDENodeMap,self.__nsOfDE_ext))
+      return arFEfAndSceneExt
       
    def getBoundaryDisplacement(self,du):
       """
