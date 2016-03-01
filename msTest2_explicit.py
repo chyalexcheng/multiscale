@@ -113,26 +113,27 @@ while t <= nt:
       # write stress on the bottom
       fout.write(str(t*dt)+' '+str(forceBot[0])+' '+str(forceBot[1])+' '+str(lengthBot)+'\n')
       
-      # get local void ratio
-      vR = prob.getLocalVoidRatio(); vR = proj(vR)
-      # get local fabric intensity
-      fab = prob.getLocalFabric()
-      dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
-      anis = sqrt(.5*inner(dev_fab,dev_fab)); anis = proj(anis)
-      # get local rotation
-      rot = prob.getLocalAvgRotation(); rot = proj(rot)
-      # get local shear strain
-      strain = prob.getCurrentStrain()
-      volume_strain = trace(strain)
-      dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
-      shear = sqrt(2*inner(dev_strain,dev_strain)); shear = proj(shear)
-
+      #~ # get local void ratio
+      #~ vR = prob.getLocalVoidRatio(); vR = proj(vR)
+      #~ # get local fabric intensity
+      #~ fab = prob.getLocalFabric()
+      #~ dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
+      #~ anis = sqrt(.5*inner(dev_fab,dev_fab)); anis = proj(anis)
+      #~ # get local rotation
+      #~ rot = prob.getLocalAvgRotation(); rot = proj(rot)
+      #~ # get local shear strain
+      #~ strain = prob.getCurrentStrain()
+      #~ volume_strain = trace(strain)
+      #~ dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
+      #~ shear = sqrt(2*inner(dev_strain,dev_strain)); shear = proj(shear)
+#~ 
       # export FE scene
-      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
+      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
+      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig)
       # export DE scene
       prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
       # export local response at Gauss point
-      saveGauss2D(gaussDir+"/time_"+str(t)+".dat",strain=strain,stress=stress,fab=fab)
+      #~ saveGauss2D(gaussDir+"/time_"+str(t)+".dat",strain=strain,stress=stress,fab=fab)
       print "stress ratio at bottom: %e"%(forceBot[0]/forceBot[1])
 
    # next iteration
