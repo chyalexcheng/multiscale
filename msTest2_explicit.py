@@ -26,7 +26,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 4.0; duration = 25
+safe = 2.0; duration = 25
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test2/'
 # import membrane node Ids in exterior DE domain
