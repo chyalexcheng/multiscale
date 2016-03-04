@@ -26,7 +26,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 2.0; duration = 15
+safe = 4.0; duration = 15
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test2/'
 # import membrane node Ids in exterior DE domain
@@ -53,10 +53,12 @@ x = dom.getX()
 bx = FunctionOnBoundary(dom).getX()
 
 # Dirichlet BC positions, smooth lateral boundary
-Dbc = whereZero(x[0])*[1,0] + whereZero(x[0]-lx)*[1,0]
+Dbc = whereZero(x[0])*[1,0] + whereZero(x[0]-lx)*[1,0] + \
+      whereZero(x[0]-lx)*whereZero(x[1])*[1,1]
 
 # Dirichlet BC values
-Dbc_val = whereZero(x[0])*[0,0] + whereZero(x[0]-lx)*[0,0]
+Dbc_val = whereZero(x[0])*[0,0] + whereZero(x[0]-lx)*[0,0] + \
+          whereZero(x[0]-lx)*whereZero(x[1])*[0,0]
 
 # Neumann BC postions, known pressure on the top
 Nbc = whereZero(bx[1]-ly)*[0,surcharge]
