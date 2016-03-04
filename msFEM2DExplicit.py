@@ -340,7 +340,7 @@ class MultiScale(object):
       """
       export interactions in all DE scenes using vtk format
       """
-      self.__pool.map(exportInt,zip(self.__scenes,repeat(vtkDir),repeat(t)))
+      #~ self.__pool.map(exportInt,zip(self.__scenes,repeat(vtkDir),repeat(t)))
       self.__pool.apply(exportExt,(self.__sceneExt,self.__mIds,vtkDir,t))
                     
    def getPDE(self):

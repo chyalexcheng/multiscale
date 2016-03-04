@@ -17,7 +17,7 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # read Gmsh mesh with 3-node triangle element; each element has 1 Gauss point
-mshName = 'Msh5'; numOfElements = 200
+mshName = 'Msh5'; numOfElements = 2*(int(mshName[3])*2)**2
 # number of Gauss points
 gp = 1; numg = gp*numOfElements;
 packNo=range(0,numg)
@@ -26,7 +26,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 2.0; duration = 25
+safe = 2.0; duration = 15
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test2/'
 # import membrane node Ids in exterior DE domain
@@ -44,7 +44,7 @@ fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'.dat','w')
 ###################
 
 # multiscale model description
-prob = MultiScale(mshName=mshName,dim=dim,ng=numg,np=nump,rho=rho,\
+prob = MultiScale(mshName=mshName[:4],dim=dim,ng=numg,np=nump,rho=rho,\
                   mIds=mIds,FEDENodeMap=FEDENodeMap)
 
 # nodal coordinate
@@ -85,7 +85,7 @@ Dir = 'msTest2/explicit/gp'+str(gp)+'/'+mshName+'/'
 vtkDir = './result/vtk/'+Dir
 packDir = './result/packing/'+Dir
 gaussDir = './result/gauss/'+Dir
-tWrite = int(0.25/dt)
+tWrite = int(0.15/dt)
 
 while t <= nt:
    # update displacement and velocity at (n+1) timesteps
@@ -113,23 +113,23 @@ while t <= nt:
       # write stress on the bottom
       fout.write(str(t*dt)+' '+str(forceBot[0])+' '+str(forceBot[1])+' '+str(lengthBot)+'\n')
       
-      #~ # get local void ratio
-      #~ vR = prob.getLocalVoidRatio(); vR = proj(vR)
+      # get local void ratio
+      vR = prob.getLocalVoidRatio(); vR = proj(vR)
       #~ # get local fabric intensity
       #~ fab = prob.getLocalFabric()
       #~ dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
       #~ anis = sqrt(.5*inner(dev_fab,dev_fab)); anis = proj(anis)
-      #~ # get local rotation
-      #~ rot = prob.getLocalAvgRotation(); rot = proj(rot)
-      #~ # get local shear strain
-      #~ strain = prob.getCurrentStrain()
-      #~ volume_strain = trace(strain)
-      #~ dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
-      #~ shear = sqrt(2*inner(dev_strain,dev_strain)); shear = proj(shear)
-#~ 
+      # get local rotation
+      rot = prob.getLocalAvgRotation(); rot = proj(rot)
+      # get local shear strain
+      strain = prob.getCurrentStrain()
+      volume_strain = trace(strain)
+      dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
+      shear = sqrt(2*inner(dev_strain,dev_strain)); shear = proj(shear)
+
       # export FE scene
+      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot)
       #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
-      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig)
       # export DE scene
       prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
       # export local response at Gauss point

@@ -24,11 +24,9 @@ color = [84./255,89./255,109./255]
 # global damping
 damp = 0.4
 width = 0.1
-# assumed radius
-rGrid = 5.e-3
 # discretization per cylinder (change this when mesh changes)
-L = 0.12; nL = 0
-if not nL: nL = int(L/(2.*rGrid))
+L = lx/2/int(mshName[-1]); nL = 20; 
+rGrid = L/nL/2
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0
 # density
@@ -247,8 +245,10 @@ for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'xzXYZ'
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
 # estimate timestep size
-O.dt = utils.PWaveTimeStep()
+O.dt = 0.5*utils.PWaveTimeStep()
 print O.dt
+# add prefix to mesh Name
+mshName += 'r20'
 np.save('./DE_exts/Test2/FEDENodeMap'+mshName+'.npy',nodeIDs)
 np.save('./DE_exts/Test2/mNodesIds'+mshName+'.npy',mNodesIds)
 
