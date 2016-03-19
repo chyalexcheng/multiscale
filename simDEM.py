@@ -1,4 +1,4 @@
-__author__="Ning Guo, ceguo@connect.ust.hk; modified by Hongyang Cheng, d132535@hiroshima-u.ac.jp"
+__author__="Ning Guo, ceguo@connect.ust.hk; Hongyang Cheng, d132535@hiroshima-u.ac.jp"
 __supervisor__="Jidong Zhao, jzhao@ust.hk"
 __institution__="The Hong Kong University of Science and Technology"
 
@@ -8,7 +8,7 @@ DEM part for Hierachical Multiscale simulation:
 	of the FE domain and returns updated stress
 DEM part for Concurrent Multiscale simulation:
 	sets up the concurrent DE domain which receives boundary displacement
-	from the FE domain and returns back boundary nodal force
+	from the FE domain and returns back boundary nodal force to FE solver
 """
 
 import time
@@ -25,6 +25,7 @@ from yade import export
 
 ### Below is added for surface coupling by Hongyang Cheng ###
 
+# directory of prepared DE scenes
 DE_int = './DE_exts/Test1/DE_alum.yade.gz'
 DE_ext = './DE_exts/Test1/DE_ext_Msh4_21.yade.gz'
 
@@ -44,7 +45,7 @@ def initNbc(scene,conf,mIds,FEDEMap):
    return FEf
   
 """
-# load exterior DE domain scene and return boundary traction
+# load exterior DE domain scene and return boundary traction (deprecated)
 def initNbc(scene,conf,mIds,FEDEMap):
    Omega().stringToScene(scene)
    if conf:
@@ -55,7 +56,7 @@ def initNbc(scene,conf,mIds,FEDEMap):
    return FENbc
 """
 
-# apply displacement on interface DE nodes and corresponding nodal force
+# apply displacement on interface DE nodes and return nodal force
 def moveInterface_getForce2D(scene,conf,DEdu,mIds,FEDEMap,ns):
    Omega().stringToScene(scene)
    if conf:
@@ -68,7 +69,7 @@ def moveInterface_getForce2D(scene,conf,DEdu,mIds,FEDEMap,ns):
       b[key].state.vel = utils.Vector3(v[0],v[1],0)   
    # run until reach target du
    Omega().run(ns,True)
-   # get boundary traction on membrane elements
+   # get boundary force on membrane nodes
    FEf = getBoundaryForce(FEDEMap)
    # save Omega to scene and reset Omega to reduce leaked memory
    scene = Omega().sceneToString()
@@ -76,7 +77,7 @@ def moveInterface_getForce2D(scene,conf,DEdu,mIds,FEDEMap,ns):
    return FEf, scene
 
 """
-# apply displacement on interface DE nodes and corresponding nodal traction
+# apply displacement on interface DE nodes and return nodal traction
 def moveInterface_getTraction2D(scene,conf,DEdu,mIds,FEDEMap,ns,vel=1.e-3,stabLimit=1.e-3):
    Omega().stringToScene(scene)
    if conf:
@@ -102,74 +103,6 @@ def moveInterface_getTraction2D(scene,conf,DEdu,mIds,FEDEMap,ns,vel=1.e-3,stabLi
    scene = Omega().sceneToString()
    Omega().reset()
    return FENbc, scene
-"""
-
-"""
-# This is a dummy function to test memory leak
-def moveInterface_getForce2D(scene):
-   Omega().stringToScene(scene)
-   del scene
-   Omega().exitNoBacktrace()
-   FENbc = 0
-   return FENbc, scene[:]
-"""   
-
-# apply hydrostatic pressure on membrane nodes
-def applyBoundaryForce(conf,mIds,width=0.1):
-   # run one step only to set permanent force
-   Omega().run(1,True)
-   for i in mIds:
-      intrs = Omega().bodies[i].intrs()
-      segts = []; n = utils.Vector3.Zero
-      for intr in intrs:
-         if isinstance(intr.phys,CohFrictPhys):
-            segt = (intr.geom.refR1+intr.geom.refR2-intr.geom.penetrationDepth)*intr.geom.normal
-            segts.append(segt); n += segt
-      # segment normal
-      n = n.normalized()
-      dl = sum([.5*segt.dot(n) for segt in segts])
-      # cross product of unit z and interaction normal points inward
-      n = n.cross(utils.Vector3.UnitZ)
-      # get boundary force per node: f = sigma*segt*width (negative sign for compression)
-      permDEf = conf*(dl*width)*n
-      # add permanent force on membrane nodes
-      Omega().forces.addF(i,permDEf,True)
-
-# get boundary traction on interface nodes
-def getBoundaryTraction(FEDENodeMap,width=0.1):
-   Omega().run(1,True)
-   FENbc = dict((k,0) for k in FEDENodeMap.keys())
-   for key in FEDENodeMap.keys():
-      DEid = FEDENodeMap[key]
-      f = Omega().forces.f(DEid).xy()
-      intrs = Omega().bodies[DEid].intrs()
-      segts = []; n = utils.Vector3.Zero
-      for intr in intrs:
-         if isinstance(intr.phys,CohFrictPhys):
-            segt = (intr.geom.refR1+intr.geom.refR2-intr.geom.penetrationDepth)*intr.geom.normal
-            segts.append(segt); n += segt
-      # segment normal
-      n = n.normalized()
-      dl = sum([.5*segt.dot(n) for segt in segts])
-      FENbc[key] = (f[0]/(dl*width),f[1]/(dl*width))
-   #~ print max(FENbc.values())
-   return FENbc
-
-"""
-# get boundary traction on interface elements
-def getBoundaryTraction(FEDEBoundMap,width=0.1):
-   FENbc = dict((k,0) for k in FEDEBoundMap.keys())
-   for key in FENbc.keys():
-      DEid = FEDEBoundMap[key]
-      f = Vector3.Zero; b = Omega().bodies[DEid]
-      for intr in b.intrs():
-         df = intr.phys.normalForce+intr.phys.shearForce
-         if intr.id2 != DEid: df *=-1
-         f = f+df
-      dl = (b.shape.node1.state.pos-b.shape.node2.state.pos).norm()
-      FENbc[key] = (f[0]/(dl*width),f[1]/(dl*width))
-   #~ print max(FENbc.values())
-   return FENbc
 """
 
 # get boundary force on interface nodes
@@ -219,6 +152,74 @@ def getScenetDt(scene):
 	Omega().stringToScene(scene)
 	return Omega().dt
 
+# apply hydrostatic pressure on membrane nodes
+def applyBoundaryForce(conf,mIds,width=0.1):
+   # run one step only to set permanent force
+   Omega().run(1,True)
+   for i in mIds:
+      intrs = Omega().bodies[i].intrs()
+      segts = []; n = utils.Vector3.Zero
+      for intr in intrs:
+         if isinstance(intr.phys,CohFrictPhys):
+            segt = (intr.geom.refR1+intr.geom.refR2-intr.geom.penetrationDepth)*intr.geom.normal
+            segts.append(segt); n += segt
+      # segment normal
+      n = n.normalized()
+      dl = sum([.5*segt.dot(n) for segt in segts])
+      # cross product of unit z and interaction normal points inward
+      n = n.cross(utils.Vector3.UnitZ)
+      # get boundary force per node: f = sigma*segt*width (negative sign for compression)
+      permDEf = conf*(dl*width)*n
+      # add permanent force on membrane nodes
+      Omega().forces.addF(i,permDEf,True)
+
+
+"""
+# This is a function to test memory leak
+def moveInterface_getForce2D(scene):
+   Omega().stringToScene(scene)
+   del scene
+   Omega().exitNoBacktrace()
+   FENbc = 0
+   return FENbc, scene[:]
+
+# get boundary traction on interface nodes (deprecated)
+def getBoundaryTraction(FEDENodeMap,width=0.1):
+   Omega().run(1,True)
+   FENbc = dict((k,0) for k in FEDENodeMap.keys())
+   for key in FEDENodeMap.keys():
+      DEid = FEDENodeMap[key]
+      f = Omega().forces.f(DEid).xy()
+      intrs = Omega().bodies[DEid].intrs()
+      segts = []; n = utils.Vector3.Zero
+      for intr in intrs:
+         if isinstance(intr.phys,CohFrictPhys):
+            segt = (intr.geom.refR1+intr.geom.refR2-intr.geom.penetrationDepth)*intr.geom.normal
+            segts.append(segt); n += segt
+      # segment normal
+      n = n.normalized()
+      dl = sum([.5*segt.dot(n) for segt in segts])
+      FENbc[key] = (f[0]/(dl*width),f[1]/(dl*width))
+   #~ print max(FENbc.values())
+   return FENbc
+
+
+# get boundary traction on interface elements (deprecated)
+def getBoundaryTraction(FEDEBoundMap,width=0.1):
+   FENbc = dict((k,0) for k in FEDEBoundMap.keys())
+   for key in FENbc.keys():
+      DEid = FEDEBoundMap[key]
+      f = Vector3.Zero; b = Omega().bodies[DEid]
+      for intr in b.intrs():
+         df = intr.phys.normalForce+intr.phys.shearForce
+         if intr.id2 != DEid: df *=-1
+         f = f+df
+      dl = (b.shape.node1.state.pos-b.shape.node2.state.pos).norm()
+      FENbc[key] = (f[0]/(dl*width),f[1]/(dl*width))
+   #~ print max(FENbc.values())
+   return FENbc
+"""
+
 ### Below is Ning Guo's original script ###
 
 def initLoad(ID=0): # where ID identifies the Gauss point location
@@ -243,18 +244,20 @@ def numOfParticles(scene):
    Omega().stringToScene(scene)
    return len(Omega().bodies) # !!! for spherical particle packing only
 
-#~ # Apply deformation on 2D DEM packing
-#~ def shear2D(param):
-   #~ if len(param) != 2:
-      #~ raise RuntimeError,"No. of param. should be exactly 2. 0: RVE scene; 1: strain."
-   #~ Omega().stringToScene(param[0])
-   #~ # ns >= 2
-   #~ ns=int(max(1e5*numpy.max(numpy.abs(param[1])),2))
-   #~ dstrain = utils.Matrix3(param[1][0],param[1][1],0, param[1][2],param[1][3],0, 0,0,0)
-   #~ Omega().cell.velGrad=dstrain/(ns*Omega().dt)
-   #~ Omega().run(ns,True)
-   #~ Omega().cell.velGrad=utils.Matrix3.Zero
-   #~ return Omega().sceneToString()
+"""
+# Apply deformation on 2D DEM packing (Ning's original function)
+def shear2D(param):
+   if len(param) != 2:
+      raise RuntimeError,"No. of param. should be exactly 2. 0: RVE scene; 1: strain."
+   Omega().stringToScene(param[0])
+   # ns >= 2
+   ns=int(max(1e5*numpy.max(numpy.abs(param[1])),2))
+   dstrain = utils.Matrix3(param[1][0],param[1][1],0, param[1][2],param[1][3],0, 0,0,0)
+   Omega().cell.velGrad=dstrain/(ns*Omega().dt)
+   Omega().run(ns,True)
+   Omega().cell.velGrad=utils.Matrix3.Zero
+   return Omega().sceneToString()
+"""
    
 # Apply deformation on 3D DEM packing
 def shear3D(param):

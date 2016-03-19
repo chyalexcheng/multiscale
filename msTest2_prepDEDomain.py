@@ -11,7 +11,7 @@ import numpy as np
 #####################
 
 # mesh file name
-mshName = 'Msh5'
+mshName = 'Msh4'
 # sample size, 1.2m by 1.2m
 lx = 1.2; ly = 1.2
 # initial pressure on membrane from soil
@@ -24,7 +24,7 @@ color = [84./255,89./255,109./255]
 # global damping
 damp = 0.4
 width = 0.1
-# discretization per cylinder (change this when mesh changes)
+# discretization per cylinder
 rGrid = 5.e-3
 L = lx/2/int(mshName[-1]); nL = 0 
 if not nL: nL = int(L/(2.*rGrid))
@@ -56,11 +56,8 @@ E_m = young; v_m = 0.; phi_m = 0.; sigTmax_m = sigTmax; sigSmax_m = sigTmax
 E_i = 0.   ; v_i = 0.; phi_i = 0.; sigTmax_i = sigTmax; sigSmax_i = sigTmax
 
 ## material parameters for external behavior
-# scale tangential stiffness with different resolution
-sR = 1.
-#~ sR = float(mshName[-1])/3.
 # m2i: membrane-interface
-E_m2i = stif*young; v_m2i = 0.33*sR; phi_m2i = radians(34)
+E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(21)
 #~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
 
 #################

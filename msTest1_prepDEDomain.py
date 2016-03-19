@@ -24,7 +24,7 @@ color = [84./255,89./255,109./255]
 # global damping
 damp = 0.2
 width = 0.1
-# discretization per cylinder (change this when mesh changes)
+# discretization per cylinder
 rGrid = 5.e-3
 L = lx/2/int(mshName[-1]); nL = 0 
 if not nL: nL = int(L/(2.*rGrid))
@@ -261,9 +261,9 @@ for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'zXYZ'
 # estimate timestep size
 O.dt = 0.7*utils.PWaveTimeStep()
 print O.dt
-np.save('FEDENodeMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',nodeIDs)
-np.save('FEDEBoundMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',bRefIDs)
-np.save('mNodesIds'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',mNodesIds)
+#~ np.save('FEDENodeMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',nodeIDs)
+#~ np.save('FEDEBoundMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',bRefIDs)
+#~ np.save('mNodesIds'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',mNodesIds)
 
 # apply boundary force
 if confining:
@@ -307,4 +307,4 @@ while 1:
 
 # save exterior DE scene
 qt.Renderer().bgColor = color
-O.save('DE_ext_'+mshName+'_'+str(int(degrees(phi_m2i)))+'.yade.gz')
+#~ O.save('DE_ext_'+mshName+'_'+str(int(degrees(phi_m2i)))+'.yade.gz')

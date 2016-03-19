@@ -1,12 +1,13 @@
-__author__="Ning Guo, ceguo@connect.ust.hk; modified by Hongyang Cheng, d132535@hiroshima-u.ac.jp"
+__author__="Ning Guo, ceguo@connect.ust.hk; Hongyang Cheng, d132535@hiroshima-u.ac.jp"
 __supervisor__="Jidong Zhao, jzhao@ust.hk"
 __institution__="The Hong Kong University of Science and Technology"
 
 """ 2D model for Hierachical/Concurrent multiscale simulation
-which implements explicit time integration into FEM framework
-to solve the nonlinear boundary valued problem. 
-Stress and boundary conditions are obtained from DEM simulation
- by calling simDEM modules"""
+which implements explicit time integration in FEM
+to solve a nonlinear boundary valued problem. 
+Stress and boundary conditions are obtained from RVEs(internal DE) and
+interface discrete cylinder elements
+by calling simDEM modules"""
 
 # import Escript modules
 import esys.escript as escript
@@ -43,11 +44,10 @@ def get_pool(mpi=False,threads=1):
 class MultiScale(object):
    """
    problem description:
-   -(A_{ijkl} u_{k,l})_{,j} = -X_{ij,j} + Y_i
-   Neumann boundary: n_j A_{ijkl} u_{k,l} = n_j X_{ij} + y_i
+   D_ij u_j = -X_{ij,j} + Y_i
+   Neumann boundary: d_ij u_j = n_j X_{ij} + y_i
    Dirichlet boundary: u_i = r_i where q_i > 0
    :var u: unknown vector, displacement
-   :var A: elastic tensor / tangent operator
    :var X: old/current stress tensor
    :var Y: vector, body force
    :var y: vector, Neumann bc traction
@@ -65,7 +65,7 @@ class MultiScale(object):
       :param rho: type float, density of material
       :param mIds: a list contains membrane node IDs
       :param FEDENodeMap: a dictionary with FE and DE boundary node IDs in keys and values
-      :param FEDEBoundMap: a dictionary with FE and DE boundary element IDs in keys and values
+      :param FEDEBoundMap: a dictionary with FE and DE boundary element IDs in keys and values (deprecated)
       :param conf: type float, conf pressure on membrane
       """
       self.__domain=ReadGmsh(mshName+'.msh',numDim=dim,integrationOrder=1)
@@ -86,11 +86,12 @@ class MultiScale(object):
       self.__u_last=escript.Vector(0,escript.Solution(self.__domain))
       self.__u_t=escript.Vector(0,escript.Solution(self.__domain))
       self.__dt=0
+      # ratio between timesteps in internal DE and FE domain
       self.__nsOfDE_int=1
       # if FEDENodeMap is given, employ exterior DE domain
       if self.__FEDENodeMap:
-         # by default, use same time step in FE domain as in exterior DE domain 
          self.__sceneExt=self.__pool.apply(initLoadExt)
+         # ratio between timesteps in external DE and FE domain 
          self.__nsOfDE_ext=1
          # get interface nodal forces as boundary condition
          self.__FEf = self.__pool.apply(initNbc,(self.__sceneExt,self.__conf,mIds,FEDENodeMap))
@@ -115,13 +116,16 @@ class MultiScale(object):
       :param specified_u_val: type vector, specified displacement for Dirichlet boundary
       """
       self.__pde.setValue(Y=b,y=f,q=specified_u_mask,r=specified_u_val)
+      # if FEDENodeMap is given
       if self.__FEDENodeMap:
+			# assign dt_FE/dt_DE_ext to self.__nsOfDE_ext
          dt_ext = self.__pool.apply(getScenetDt,(self.__sceneExt,))
          self.__nsOfDE_ext = int(round(dt/dt_ext))
-         print "Ratio between time steps in FE and exterior DE domains: %1.1e"%self.__nsOfDE_ext
+         print "Ratio between time step in FE and exterior DE domain: %1.1e"%self.__nsOfDE_ext
       dt_int = self.__pool.map(getScenetDt,self.__scenes)
+      # assign a list of dt_FE/dt_DE_int to self.__nsOfDE_int
       self.__nsOfDE_int = numpy.round(numpy.array(dt)/dt_int).astype(int)
-      print "Maximum ratio between time steps in FE and exterior DE domains: %1.1e"%max(self.__nsOfDE_int)
+      print "Maximum ratio between time step in FE and interior DE domains: %1.1e"%max(self.__nsOfDE_int)
       if dt == 0:
          raise RuntimeError,"Time step in FE domain is not given"
       self.__dt = dt
@@ -205,7 +209,7 @@ class MultiScale(object):
       """
       # apply internal stress and equivalent body force
       self.__pde.setValue(X=X, Y=Y)
-      # if exterior DE domain exists
+      # if exterior DE domain is given
       if self.__FEDENodeMap:
          FEf = self.getFEf()
          rhs = self.__pde.getRightHandSide()
@@ -256,13 +260,13 @@ class MultiScale(object):
          # apply boundary velocity and get boundary traction (deprecated)
          self.__Nbc,self.__sceneExt=self.applyDisplIncrement_getTractionDEM(DEdu=DEdu)
          """
-         # apply boundary velocity and get boundary force      
+         # apply boundary velocity and return an asynResult object
          arFEfAndSceneExt=self.applyDisplIncrement_getForceDEM(DEdu=DEdu)
 
       # !!!!!! update stress and scenes from DEM part using strain at (n+1) time step
       self.__stress,self.__scenes = self.applyStrain_getStressDEM(st=D)
       """
-      # !!!!!! update scenes from DEM part using strain at (n+1) time step
+      # !!!!!! update scenes and return asynResult objects (deprecated)
       arScenes = self.applyStrain(st=D)
 		# !!!!!! retrieve data from asyncResults
       # update interior DE scenes
@@ -272,7 +276,7 @@ class MultiScale(object):
       for i in xrange(self.__numGaussPoints):
          self.__stress.setValueOfDataPoint(i,s[i])
       """
-       # if external DE scene presents, update scene and boundary force.
+       # if exterior DE domain is given, update scene and boundary force
       if self.__FEDENodeMap:
          self.__FEf,self.__sceneExt = arFEfAndSceneExt.get()
       return self.__u, self.__u_t
@@ -302,22 +306,22 @@ class MultiScale(object):
          stress.setValueOfDataPoint(i,s[i])
       return stress,scenes
 
-   def applyDisplIncrement_getTractionDEM(self,DEdu=escript.Data()):
-      """
-      apply displacement increment to DEM packing in the exterior domain,
-      and get boundary traction from DE interface nodes
-      """
-      FENbc, sceneExt = self.__pool.apply( \
-                        moveInterface_getTraction2D,(self.__sceneExt,self.__conf,DEdu, \
-                        self.__mIds,self.__FEDENodeMap,self.__nsOfDE_ext))
-      Nbc=escript.Vector(0,escript.Solution(self.getDomain()))
-      for FEid in self.__FEDENodeMap.keys():
-         Nbc.setValueOfDataPoint(FEid,FENbc[FEid])
-      return Nbc, sceneExt
+   #~ def applyDisplIncrement_getTractionDEM(self,DEdu=escript.Data()):
+      #~ """
+      #~ apply displacement increment to the external DE domain,
+      #~ and get boundary traction from DE interface nodes
+      #~ """
+      #~ FENbc, sceneExt = self.__pool.apply( \
+                        #~ moveInterface_getTraction2D,(self.__sceneExt,self.__conf,DEdu, \
+                        #~ self.__mIds,self.__FEDENodeMap,self.__nsOfDE_ext))
+      #~ Nbc=escript.Vector(0,escript.Solution(self.getDomain()))
+      #~ for FEid in self.__FEDENodeMap.keys():
+         #~ Nbc.setValueOfDataPoint(FEid,FENbc[FEid])
+      #~ return Nbc, sceneExt
       
    def applyDisplIncrement_getForceDEM(self,DEdu=escript.Data()):
       """
-      apply displacement increment to DEM packing in the exterior domain,
+      apply displacement increment to the external DE domain,
       and get boundary force from DE interface nodes
       """
       arFEfAndSceneExt = self.__pool.apply_async( \
@@ -327,7 +331,7 @@ class MultiScale(object):
       
    def getBoundaryDisplacement(self,du):
       """
-      get a dictionary contains DE interface node ids and enforced displacement increment
+      get a dictionary contains DE interface node ids and displacement increment
       """
       # exchange FE-node ids (keys) with DE-node ids (values)
       DEdu = dict((v,k) for k,v in self.__FEDENodeMap.iteritems())
@@ -340,7 +344,9 @@ class MultiScale(object):
       """
       export interactions in all DE scenes using vtk format
       """
+      # export interactions in RVEs
       #~ self.__pool.map(exportInt,zip(self.__scenes,repeat(vtkDir),repeat(t)))
+      # export tensile forces in membrane
       self.__pool.apply(exportExt,(self.__sceneExt,self.__mIds,vtkDir,t))
                     
    def getPDE(self):
@@ -404,11 +410,11 @@ class MultiScale(object):
 
    def getBoundaryNodesPositions(self,tag_name ="bound"):
       """
-      get a dictionary contains FE boundary node ids and corresponding positions
-      use data on "Solution" FunctionSpace to export FE node ids (DataPoint Ids)
+      get a dictionary contains FE boundary node IDs and corresponding positions
+      use data on "Solution" FunctionSpace to export FE node IDs (DataPoint IDs)
       note that though "ContinousFunction" and "Solution" FunctionSpace have save number of DataPoints,
       their numbering order are not the same!!!
-      Therefore, always use coordiates and Ids of DataPoints on "Solution" for data communication
+      Therefore, always use coordiates and IDs of DataPoints on "Solution" for data communication
       """
       tag = self.getDomain().getTag(tag_name)
       # get "Solution" FunctinonSpace
@@ -422,7 +428,7 @@ class MultiScale(object):
       pos = {}
       for i in xrange(num):
          refId = fs.getReferenceIDFromDataPointNo(i)
-         # domain FunctionSpace DataPoint Ids = RefId-1
+         # domain FunctionSpace DataPoint IDs = RefId-1
          if domFS.getTagFromDataPointNo(refId-1) == tag:
             pos[i] = x.getTupleForDataPoint(i)
       return pos
@@ -446,7 +452,7 @@ class MultiScale(object):
       return FEDEBoundMap
 
    """
-   # solve the equation of motion in verlet scheme (abandoned)
+   # solve the equation of motion in verlet scheme (deprecated)
    def solve(self,damp=.2,dt=1.e-6):
       # get initial coordinate
       x = self.getDomain().getX()

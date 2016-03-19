@@ -1,5 +1,5 @@
 """ Author: Hongyang Cheng <chyalexcheng@gmail>
-    Test #1: 2D Membrane-wrapped granular material
+    Test #2: 2D Pullout of membrane beneath granular material
 """
 from esys.escript import *
 from esys.weipa import saveVTK
@@ -20,7 +20,7 @@ dim = 2; lx = 1.2; ly = 1.2
 mshName = 'Msh4'; numOfElements = 2*(int(mshName[3])*2)**2
 # number of Gauss points
 gp = 1; numg = gp*numOfElements;
-packNo=range(0,numg)
+packNo = range(0,numg)
 # density and damping ratio
 rho = 2254.; damp = .2
 # number of processes in multiprocessing
@@ -29,13 +29,13 @@ nump = 32
 safe = 4.0; duration = 25
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test2/'
-# import membrane node Ids in exterior DE domain
+# import node IDs of membrane in exterior DE domain
 mIds = numpy.load(sceneExt+'mNodesIds'+mshName+'.npy')
-# import FE-DE boundary node mapping
+# import FE-DE mapping of boundary node IDs
 FEDENodeMap = numpy.load(sceneExt+'FEDENodeMap'+mshName+'.npy').item()
-# surcharnge pressure
+# surcharnge pressure on FE top boundary
 surcharge=-2.e4
-# open file to write force on the bottom surface with its length
+# file to write force on the bottom
 graphDir = './result/graphs/msTest2_Explicit/gp'+str(gp)+'/'
 fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'.dat','w')
 
@@ -67,11 +67,11 @@ Nbc = whereZero(bx[1]-ly)*[0,surcharge]
 ##  Initialization  ##
 ######################
 
-# compute appropriate size of timestep
+# compute appropriate timestep from eigenvalue
 eigFreq = sqrt(prob.getMaxEigenvalue())
 dt = safe*(2./eigFreq)
 
-# initialize partial difference equation and return timestep
+# initialize partial differential equation
 prob.initialize(f=Nbc, specified_u_mask=Dbc, specified_u_val=Dbc_val, dt=dt)
 
 ########################################
@@ -104,15 +104,15 @@ while t <= nt:
       sig_bounda = interpolate(sig,FunctionOnBoundary(dom)) 
       # compute boundary traction by s_ij*n_j
       traction = matrix_mult(sig_bounda,dom.getNormal())
-      # get mask for boundary nodes on bottom surface
+      # get mask for boundary nodes on the bottom
       botSurf = whereZero(bx[1])
-      # traction at bottom surface
+      # traction at the bottom
       tractBot = traction*botSurf
-      # resultant force at bottom
+      # resultant force at the bottom
       forceBot = integrate(tractBot,where=FunctionOnBoundary(dom))
-      # length of bottom surface
+      # length of the bottom surface
       lengthBot = integrate(botSurf,where=FunctionOnBoundary(dom))
-      # write stress on the bottom
+      # write stress at the bottom surface
       fout.write(str(t*dt)+' '+str(forceBot[0])+' '+str(forceBot[1])+' '+str(lengthBot)+'\n')
       
       # get local void ratio
@@ -121,7 +121,7 @@ while t <= nt:
       fab = prob.getLocalFabric()
       dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
       anis = sqrt(.5*inner(dev_fab,dev_fab))
-      # set anis to zero if no contact, i.e. anis(i) is NaN
+      # set anis to -1 if no contact
       for i in range(numg):
          if math.isnan(anis.getTupleForDataPoint(i)[0]): anis.setValueOfDataPoint(i,-1)
       # get local rotation
@@ -133,13 +133,12 @@ while t <= nt:
       shear = sqrt(2*inner(dev_strain,dev_strain)); shear = proj(shear)
 
       # export FE scene
-      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot)
       saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
-      # export DE scene
+      # export DE scenes
       prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
-      # export local response at Gauss point
+      # export local responses at Gauss points
       saveGauss2D(gaussDir+"/time_"+str(t)+".dat",strain=strain,stress=stress,fab=fab)
-      print "stress ratio at bottom: %e"%(forceBot[0]/forceBot[1])
+      print "stress ratio at the bottom: %e"%(forceBot[0]/forceBot[1])
 
    # next iteration
    print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt,L2(u_t))

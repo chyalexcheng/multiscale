@@ -30,7 +30,7 @@ print len(O.bodies)
 
 for p in O.bodies:
    p.state.blockedDOFs = 'zXY'
-   p.state.mass = 2700 * 0.1 * pi * p.shape.radius**2 # 0.1 = thickness of cylindrical particle
+   p.state.mass = 2700 * 0.1 * pi * p.shape.radius**2
    inertia = 0.5 * p.state.mass * p.shape.radius**2
    p.state.inertia = (.5*inertia,.5*inertia,inertia)
 
@@ -47,7 +47,6 @@ O.engines = [
    ),
    PeriTriaxController(
       dynCell=True,
-      # change goal and stress for altering DC
       goal=(0,pressure,0),
       stressMask=2,
       relStressTol=.001,
