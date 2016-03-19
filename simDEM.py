@@ -25,8 +25,8 @@ from yade import export
 
 ### Below is added for surface coupling by Hongyang Cheng ###
 
-DE_int = './DE_exts/Test2/DE_alum.yade.gz'
-DE_ext = './DE_exts/Test2/DE_ext_Msh5.yade.gz'
+DE_int = './DE_exts/Test1/DE_alum.yade.gz'
+DE_ext = './DE_exts/Test1/DE_ext_Msh4_21.yade.gz'
 
 # load exterior DE domain scene 
 def initLoadExt():

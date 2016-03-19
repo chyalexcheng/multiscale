@@ -56,8 +56,11 @@ E_m = young; v_m = 0.; phi_m = 0.; sigTmax_m = sigTmax; sigSmax_m = sigTmax
 E_i = 0.   ; v_i = 0.; phi_i = 0.; sigTmax_i = sigTmax; sigSmax_i = sigTmax
 
 ## material parameters for external behavior
+# scale tangential stiffness with different resolution
+sR = 1.
+#~ sR = float(mshName[-1])/3.
 # m2i: membrane-interface
-E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(34)
+E_m2i = stif*young; v_m2i = 0.33*sR; phi_m2i = radians(34)
 #~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
 
 #################
@@ -182,7 +185,7 @@ O.materials.append(CohFrictMat(young=E_m,poisson=v_m,density=rho,frictionAngle=p
 # membrane to interface
 O.materials.append(FrictMat(young=E_m2i,poisson=v_m2i,density=rho,frictionAngle=phi_m2i,label='m2iMat'))
 # boundary wall
-O.materials.append(FrictMat(young=E_m2i,poisson=v_m2i,density=rho,frictionAngle=0,label='walMat'))
+O.materials.append(FrictMat(young=E_m2i,poisson=v_m2i,density=rho,frictionAngle=phi_i,label='walMat'))
 
 ###################
 ##  Build model  ##
@@ -242,14 +245,14 @@ for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'xzXYZ'
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 ##  estimate size of timestep       ##
 ##  apply boundary force if any     ##
+##  add ghost membrane element      ##
 ##  apply boundary velocity if any  ##
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
 # estimate timestep size
-O.dt = utils.PWaveTimeStep()
+O.dt = 0.7*utils.PWaveTimeStep()
 print O.dt
-# add prefix to mesh Name
-#~ mshName += 'r20'
+# if add prefix to mesh Name, use mshName += 'r20'
 np.save('./DE_exts/Test2/FEDENodeMap'+mshName+'.npy',nodeIDs)
 np.save('./DE_exts/Test2/mNodesIds'+mshName+'.npy',mNodesIds)
 
@@ -291,6 +294,13 @@ for b in O.bodies:
 	b.state.refOri = b.state.ori
 # set damping to normal level
 O.engines[-1].damping = damp
+
+# add ghost membrane element as boundary when interface and membrane lose contact
+x, y = O.bodies[mNodesIds[0]].state.pos.xy()
+ghost = O.bodies.append(
+           gridNode([x-2.*rGrid,y,0],rGrid,wire=True,fixed=True,material='iMat',color=[1.,1.,0.]))
+O.bodies.append(gridConnection(ghost,mNodesIds[0],rGrid,wire=True,material='walMat',color=[1.,1.,0.]))
+O.bodies[ghost].state.blockedDOFs = 'xzXYZ'
 
 # apply pull-out
 O.bodies[mNodesIds[-1]].state.vel = Vector3(pullSpeed,0,0)

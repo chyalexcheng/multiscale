@@ -24,10 +24,9 @@ color = [84./255,89./255,109./255]
 # global damping
 damp = 0.2
 width = 0.1
-# assumed radius
-rGrid = 5.e-3
 # discretization per cylinder (change this when mesh changes)
-L = .15; nL = 0
+rGrid = 5.e-3
+L = lx/2/int(mshName[-1]); nL = 0 
 if not nL: nL = int(L/(2.*rGrid))
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0
@@ -58,8 +57,8 @@ E_i = 0.   ; v_i = 0.; phi_i = 0.; sigTmax_i = sigTmax; sigSmax_i = sigTmax
 
 ## material parameters for external behavior
 # m2i: membrane-interface
-#~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(34)
-E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
+E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(21)
+#~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
 
 #################
 ##  Functions  ##
@@ -225,7 +224,7 @@ for key in bRefIDs: bRefIDs[key] += dID
 # create all GridNodes first
 mNodesIds = []
 # primary nodes adjacent to interface nodes (change this when mesh changes)
-for i in iNodesIds[8:]+[iNodesIds[0]]:
+for i in iNodesIds[int(mshName[-1])*2:]+[iNodesIds[0]]:
    i1,i2 = O.interactions.withBody(i)
    # create membrane nodes without overlap with interface nodes
    n1 = i1.geom.normal; n2 = i2.geom.normal
@@ -260,11 +259,11 @@ for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'zXYZ'
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##
 
 # estimate timestep size
-O.dt = 2*utils.PWaveTimeStep()
+O.dt = 0.7*utils.PWaveTimeStep()
 print O.dt
-np.save('FEDENodeMap'+mshName+'.npy',nodeIDs)
-np.save('FEDEBoundMap'+mshName+'.npy',bRefIDs)
-np.save('mNodesIds'+mshName+'.npy',mNodesIds)
+np.save('FEDENodeMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',nodeIDs)
+np.save('FEDEBoundMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',bRefIDs)
+np.save('mNodesIds'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',mNodesIds)
 
 # apply boundary force
 if confining:
@@ -303,9 +302,9 @@ if pullSpeed:
 # initial run for contact between top nodes and membrane body (change this when mesh changes)
 while 1:
 	O.run(100,True)
-	if O.forces.f(16).norm() > 1e-2:
+	if O.forces.f(4*int(mshName[-1])).norm() > 1e-2:
 			break
 
 # save exterior DE scene
 qt.Renderer().bgColor = color
-O.save('DE_ext_'+mshName+'.yade.gz')
+O.save('DE_ext_'+mshName+'_'+str(int(degrees(phi_m2i)))+'.yade.gz')

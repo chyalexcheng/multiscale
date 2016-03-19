@@ -17,7 +17,7 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # read Gmsh mesh with 3-node triangle element; each element has 1 Gauss point
-mshName = 'Msh5'; numOfElements = 2*(int(mshName[3])*2)**2
+mshName = 'Msh4'; numOfElements = 2*(int(mshName[3])*2)**2
 # number of Gauss points
 gp = 1; numg = gp*numOfElements;
 packNo=range(0,numg)
@@ -26,7 +26,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 4.0; duration = 15
+safe = 4.0; duration = 25
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test2/'
 # import membrane node Ids in exterior DE domain
@@ -53,12 +53,12 @@ x = dom.getX()
 bx = FunctionOnBoundary(dom).getX()
 
 # Dirichlet BC positions, smooth lateral boundary
-Dbc = whereZero(x[0])*[1,0] + whereZero(x[0]-lx)*[1,0] + \
-      whereZero(x[0]-lx)*whereZero(x[1])*[1,1]
+Dbc = whereZero(x[0])*[1,0] + whereZero(x[0]-lx)*[1,0] \
+     #~ +whereZero(x[0]-lx)*whereZero(x[1])*[0,1]
 
 # Dirichlet BC values
-Dbc_val = whereZero(x[0])*[0,0] + whereZero(x[0]-lx)*[0,0] + \
-          whereZero(x[0]-lx)*whereZero(x[1])*[0,0]
+Dbc_val = whereZero(x[0])*[0,0] + whereZero(x[0]-lx)*[0,0] \
+         #~ +whereZero(x[0]-lx)*whereZero(x[1])*[0,0]
 
 # Neumann BC postions, known pressure on the top
 Nbc = whereZero(bx[1]-ly)*[0,surcharge]
@@ -117,10 +117,13 @@ while t <= nt:
       
       # get local void ratio
       vR = prob.getLocalVoidRatio(); vR = proj(vR)
-      #~ # get local fabric intensity
-      #~ fab = prob.getLocalFabric()
-      #~ dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
-      #~ anis = sqrt(.5*inner(dev_fab,dev_fab)); anis = proj(anis)
+      # get local fabric intensity
+      fab = prob.getLocalFabric()
+      dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
+      anis = sqrt(.5*inner(dev_fab,dev_fab))
+      # set anis to zero if no contact, i.e. anis(i) is NaN
+      for i in range(numg):
+         if math.isnan(anis.getTupleForDataPoint(i)[0]): anis.setValueOfDataPoint(i,-1)
       # get local rotation
       rot = prob.getLocalAvgRotation(); rot = proj(rot)
       # get local shear strain
@@ -130,12 +133,12 @@ while t <= nt:
       shear = sqrt(2*inner(dev_strain,dev_strain)); shear = proj(shear)
 
       # export FE scene
-      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot)
-      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
+      #~ saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot)
+      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
       # export DE scene
       prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
       # export local response at Gauss point
-      #~ saveGauss2D(gaussDir+"/time_"+str(t)+".dat",strain=strain,stress=stress,fab=fab)
+      saveGauss2D(gaussDir+"/time_"+str(t)+".dat",strain=strain,stress=stress,fab=fab)
       print "stress ratio at bottom: %e"%(forceBot[0]/forceBot[1])
 
    # next iteration
