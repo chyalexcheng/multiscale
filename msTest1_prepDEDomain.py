@@ -261,9 +261,9 @@ for i in mNodesIds: O.bodies[i].state.blockedDOFs = 'zXYZ'
 # estimate timestep size
 O.dt = 0.7*utils.PWaveTimeStep()
 print O.dt
-#~ np.save('FEDENodeMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',nodeIDs)
-#~ np.save('FEDEBoundMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',bRefIDs)
-#~ np.save('mNodesIds'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',mNodesIds)
+np.save('FEDENodeMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',nodeIDs)
+np.save('FEDEBoundMap'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',bRefIDs)
+np.save('mNodesIds'+mshName+'_'+str(int(degrees(phi_m2i)))+'.npy',mNodesIds)
 
 # apply boundary force
 if confining:
@@ -307,4 +307,4 @@ while 1:
 
 # save exterior DE scene
 qt.Renderer().bgColor = color
-#~ O.save('DE_ext_'+mshName+'_'+str(int(degrees(phi_m2i)))+'.yade.gz')
+O.save('DE_ext_'+mshName+'_'+str(int(degrees(phi_m2i)))+'.yade.gz')
