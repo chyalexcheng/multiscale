@@ -17,7 +17,7 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # read Gmsh mesh with 3-node triangle element; each element has 1 Gauss point
-mshName = 'Msh4'; numOfElements = 2*(int(mshName[3])*2)**2
+mshName = 'Msh4_5'; numOfElements = 2*(int(mshName[3])*2)**2
 # number of Gauss points
 gp = 1; numg = gp*numOfElements;
 packNo = range(0,numg)
@@ -120,7 +120,7 @@ while t <= nt:
       # force magnitude
       magforceBot = sqrt(forceBot.dot(forceBot))
       # write stress at the bottom surface
-      fout.write(str(t*dt)+' '+str(magforceBot)+' '+str(forceBot)+'\n')
+      fout.write(str(t*dt)+' '+str(magforceBot)+' '+str(lengthBot)+'\n')
       
       # get local void ratio
       vR = prob.getLocalVoidRatio(); vR = proj(vR)
@@ -145,7 +145,7 @@ while t <= nt:
       prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
       # export local responses at Gauss points
       saveGauss2D(gaussDir+"/time_"+str(t)+".dat",strain=strain,stress=stress,fab=fab)
-      print "force at the bottom: %e"%magForceBottom
+      print "force at the bottom: %e"%magforceBot
       
    # next iteration
    print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt,L2(u_t))

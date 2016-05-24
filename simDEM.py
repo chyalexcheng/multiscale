@@ -27,7 +27,7 @@ from yade import export
 
 # directory of prepared DE scenes
 DE_int = './DE_exts/Test1/DE_alum.yade.gz'
-DE_ext = './DE_exts/Test1/DE_ext_Msh4_21.yade.gz'
+DE_ext = './DE_exts/Test1/DE_ext_Msh4_5.yade.gz'
 
 # load exterior DE domain scene 
 def initLoadExt():

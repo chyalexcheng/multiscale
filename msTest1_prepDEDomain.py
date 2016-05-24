@@ -57,7 +57,7 @@ E_i = 0.   ; v_i = 0.; phi_i = 0.; sigTmax_i = sigTmax; sigSmax_i = sigTmax
 
 ## material parameters for external behavior
 # m2i: membrane-interface
-E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(21)
+E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(5)
 #~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
 
 #################
