@@ -25,12 +25,11 @@ from yade import export
 
 ### Below is added for surface coupling by Hongyang Cheng ###
 
-# directory of prepared DE scenes
+# state filename of intial DE packing
 DE_int = './DE_exts/Test1/DE_alum.yade.gz'
-DE_ext = './DE_exts/Test1/DE_ext_Msh4_5.yade.gz'
 
 # load exterior DE domain scene 
-def initLoadExt():
+def initLoadExt(DE_ext):
    Omega().load(DE_ext)
    return Omega().sceneToString()
 

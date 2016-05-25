@@ -11,7 +11,7 @@ import numpy as np
 #####################
 
 # mesh file name
-mshName = 'Msh4'
+mshName = 'MshQuad3'
 # sample size, 1.2m by 1.2m
 lx = 1.2; ly = 1.2
 # confining pressure
@@ -57,8 +57,8 @@ E_i = 0.   ; v_i = 0.; phi_i = 0.; sigTmax_i = sigTmax; sigSmax_i = sigTmax
 
 ## material parameters for external behavior
 # m2i: membrane-interface
-E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(5)
-#~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
+#~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(5)
+E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
 
 #################
 ##  Functions  ##
@@ -223,8 +223,12 @@ for key in bRefIDs: bRefIDs[key] += dID
 
 # create all GridNodes first
 mNodesIds = []
-# primary nodes adjacent to interface nodes (change this when mesh changes)
-for i in iNodesIds[int(mshName[-1])*2:]+[iNodesIds[0]]:
+# define the first membrane node to create
+# (if quad elements are used n = 4, else n =2)
+if mshName[-5:-1] == 'Quad': n = 4
+else:	n = 2
+# create membrane nodes
+for i in iNodesIds[int(mshName[-1])*n:]+[iNodesIds[0]]:
    i1,i2 = O.interactions.withBody(i)
    # create membrane nodes without overlap with interface nodes
    n1 = i1.geom.normal; n2 = i2.geom.normal
@@ -239,8 +243,8 @@ for i in iNodesIds[int(mshName[-1])*2:]+[iNodesIds[0]]:
       gridNode(pos_new,rGrid,wire=True,fixed=False,material='mMat',color=[0.,1.,0.])))
 # refine membrane elements
 for i,j in zip(mNodesIds[:-1],mNodesIds[1:]):
-   dL = (O.bodies[j].state.pos-O.bodies[i].state.pos)/nL
-   for k in xrange(nL-1):
+   dL = (O.bodies[j].state.pos-O.bodies[i].state.pos)/(2*nL/n+1)
+   for k in xrange((2*nL/n+1)-1):
       pos = O.bodies[i].state.pos+(k+1)*dL
       mNodesIds.append(O.bodies.append(
          gridNode(pos,rGrid,wire=True,fixed=False,material='mMat',color=[0.,1.,0.])))
@@ -302,7 +306,8 @@ if pullSpeed:
 # initial run for contact between top nodes and membrane body (change this when mesh changes)
 while 1:
 	O.run(100,True)
-	if O.forces.f(4*int(mshName[-1])).norm() > 1e-2:
+	#~ if O.forces.f(4*int(mshName[-1])).norm() > 1e-2:
+	if O.forces.f(22).norm() > 1e-2:
 			break
 
 # save exterior DE scene

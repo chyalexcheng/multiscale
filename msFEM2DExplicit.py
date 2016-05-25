@@ -11,7 +11,6 @@ by calling simDEM modules"""
 
 # import Escript modules
 import esys.escript as escript
-from esys.finley import ReadGmsh
 from esys.escript import util
 from esys.escript.linearPDEs import LinearPDE,SolverOptions
 # import YADE modules
@@ -54,8 +53,8 @@ class MultiScale(object):
    :var q: vector, Dirichlet bc mask
    :var r: vector, Dirichlet bc value
    """
-   def __init__(self,mshName,dim,ng=1,useMPI=False,np=1,rho=2.35e3,mIds=False,\
-                FEDENodeMap=False,FEDEBoundMap=False,conf=False):
+   def __init__(self,domain,dim,ng=1,useMPI=False,np=1,rho=2.35e3,mIds=False,\
+                FEDENodeMap=False,DE_ext=False,FEDEBoundMap=False,conf=False):
       """
       initialization of the problem, i.e. model constructor
       :param domain: type Domain, domain of the problem
@@ -65,10 +64,11 @@ class MultiScale(object):
       :param rho: type float, density of material
       :param mIds: a list contains membrane node IDs
       :param FEDENodeMap: a dictionary with FE and DE boundary node IDs in keys and values
+      :param DE_ext: name of file which saves initial state of exterior DE domain
       :param FEDEBoundMap: a dictionary with FE and DE boundary element IDs in keys and values (deprecated)
       :param conf: type float, conf pressure on membrane
       """
-      self.__domain=ReadGmsh(mshName+'.msh',numDim=dim,integrationOrder=1)
+      self.__domain=domain
       self.__pde=LinearPDE(self.__domain,numEquations=dim,numSolutions=dim)
       self.__pde.getSolverOptions().setSolverMethod(SolverOptions.HRZ_LUMPING)
       self.__pde.setSymmetryOn()
@@ -90,7 +90,7 @@ class MultiScale(object):
       self.__nsOfDE_int=1
       # if FEDENodeMap is given, employ exterior DE domain
       if self.__FEDENodeMap:
-         self.__sceneExt=self.__pool.apply(initLoadExt)
+         self.__sceneExt=self.__pool.apply(initLoadExt,(DE_ext,))
          # ratio between timesteps in external DE and FE domain 
          self.__nsOfDE_ext=1
          # get interface nodal forces as boundary condition
