@@ -18,7 +18,7 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # name of mesh file
-mshName = 'MshQuad3_0';
+mshName = 'MshQuad4_0';
 # Mesh with 8-node triangle elements; each element has 4 Gauss point
 if mshName[3:7] == 'Quad': numOfElements = (int(mshName[-3])*2)**2
 # Mesh with 3-node triangle elements; each element has 1 Gauss point
@@ -156,7 +156,7 @@ while t <= nt:
       print "force at the bottom: %e"%magforceBot
       
    # next iteration
-   print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt,L2(u_t))
+   print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt,Lsup(u_t))
    t += 1
 
 prob.getCurrentPacking(pos=(),time=t,prefix=packDir)

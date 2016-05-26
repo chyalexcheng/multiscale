@@ -11,7 +11,7 @@ import numpy as np
 #####################
 
 # mesh file name
-mshName = 'MshQuad3'
+mshName = 'MshQuad4'
 # sample size, 1.2m by 1.2m
 lx = 1.2; ly = 1.2
 # confining pressure
@@ -243,8 +243,8 @@ for i in iNodesIds[int(mshName[-1])*n:]+[iNodesIds[0]]:
       gridNode(pos_new,rGrid,wire=True,fixed=False,material='mMat',color=[0.,1.,0.])))
 # refine membrane elements
 for i,j in zip(mNodesIds[:-1],mNodesIds[1:]):
-   dL = (O.bodies[j].state.pos-O.bodies[i].state.pos)/(2*nL/n+1)
-   for k in xrange((2*nL/n+1)-1):
+   dL = (O.bodies[j].state.pos-O.bodies[i].state.pos)/(2*nL/n)
+   for k in xrange((2*nL/n)-1):
       pos = O.bodies[i].state.pos+(k+1)*dL
       mNodesIds.append(O.bodies.append(
          gridNode(pos,rGrid,wire=True,fixed=False,material='mMat',color=[0.,1.,0.])))
@@ -307,7 +307,7 @@ if pullSpeed:
 while 1:
 	O.run(100,True)
 	#~ if O.forces.f(4*int(mshName[-1])).norm() > 1e-2:
-	if O.forces.f(22).norm() > 1e-2:
+	if O.forces.f(38).norm() > 1e-2:
 			break
 
 # save exterior DE scene
