@@ -18,7 +18,7 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # name of mesh file
-mshName = 'MshQuad4_0';
+mshName = 'MshQuad6_0';
 # Mesh with 8-node triangle elements; each element has 4 Gauss point
 if mshName[3:7] == 'Quad': numOfElements = (int(mshName[-3])*2)**2
 # Mesh with 3-node triangle elements; each element has 1 Gauss point
@@ -31,7 +31,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 4.0; duration = 25
+safe = 3.0; duration = 25
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test1/'
 # import node IDs of membrane in exterior DE domain
