@@ -31,7 +31,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 3.0; duration = 25
+safe = 2.0; duration = 25
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test1/'
 # import node IDs of membrane in exterior DE domain
@@ -131,7 +131,7 @@ while t <= nt:
       fout.write(str(t*dt)+' '+str(magforceBot)+' '+str(lengthBot)+'\n')
       
       # get local void ratio
-      vR = prob.getLocalVoidRatio(); vR = proj(vR)
+      vR = prob.getLocalVoidRatio()
       # get local fabric intensity
       fab = prob.getLocalFabric()
       dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
@@ -140,12 +140,12 @@ while t <= nt:
       for i in range(numg):
          if math.isnan(anis.getTupleForDataPoint(i)[0]): anis.setValueOfDataPoint(i,-1)
       # get local rotation
-      rot = prob.getLocalAvgRotation(); rot = proj(rot)
+      rot = prob.getLocalAvgRotation()
       # get local shear strain
       strain = prob.getCurrentStrain()
       volume_strain = trace(strain)
       dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
-      shear = sqrt(2*inner(dev_strain,dev_strain)); shear = proj(shear)
+      shear = sqrt(2*inner(dev_strain,dev_strain))
       
       # export FE scene
       saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
