@@ -31,7 +31,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 2.0; duration = 25
+safe = 2.0; duration = 25/2.
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test1/'
 # import node IDs of membrane in exterior DE domain
@@ -44,7 +44,7 @@ DE_ext = './DE_exts/Test1/DE_ext_'+mshName+'.yade.gz'
 #~ FEDEBoundMap = numpy.load(sceneExt+'FEDEBoundMap'+mshName+'.npy').item()
 # file to write force on the bottom
 graphDir = './result/graphs/msTest1_Explicit/gp'+str(gp)+'/'
-fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'.dat','w')
+fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'_quasi.dat','w')
 
 ###################
 ##  model setup  ##
@@ -95,68 +95,81 @@ prob.initialize(specified_u_mask=Dbc, specified_u_val=Dbc_val, dt=dt)
 time_start = time.time()
 t = 1
 nt = int(duration/dt)
+tWrite = nt/100
+Ek_max = 0
+rtol = 1e-4
 # directory to export vtk data and packing scenes
 Dir = 'msTest1/explicit/gp'+str(gp)+'/'+mshName+'/'
 vtkDir = './result/vtk/'+Dir
 packDir = './result/packing/'+Dir
 gaussDir = './result/gauss/'+Dir
-tWrite = int(0.25/dt)
 
 while t <= nt:
    # update displacement and velocity at (n+1) timesteps
    u, u_t = prob.solve(damp=damp)
+   # update maximum kinetic energy
+   Ek =  abs(integrate(length(u_t)**2*rho)/2.)
+   if Ek > Ek_max: Ek_max = Ek
    # write data at selected timesteps
    if t%tWrite == 0:
-      # get stress at (n) timesteps
-      stress = prob.getCurrentStress()
-      dom = prob.getDomain()
-      proj = Projector(dom)
-      # project Gauss point value to nodal value
-      sig = proj(stress)
-      # interpolate to stress at the boundary
-      sig_bounda = interpolate(sig,FunctionOnBoundary(dom)) 
-      # compute boundary traction by s_ij*n_j
-      traction = matrix_mult(sig_bounda,dom.getNormal())
-      # get mask for boundary nodes on the bottom
-      botSurf = whereZero(bx[1])
-      # traction at the bottom
-      tractBot = traction*botSurf
-      # resultant force at the bottom
-      forceBot = integrate(tractBot,where=FunctionOnBoundary(dom))
-      # length of the bottom surface
-      lengthBot = integrate(botSurf,where=FunctionOnBoundary(dom))
-      # force magnitude
-      magforceBot = sqrt(forceBot.dot(forceBot))
-      # write stress at the bottom surface
-      fout.write(str(t*dt)+' '+str(magforceBot)+' '+str(lengthBot)+'\n')
-      
-      # get local void ratio
-      vR = prob.getLocalVoidRatio()
-      # get local fabric intensity
-      fab = prob.getLocalFabric()
-      dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
-      anis = sqrt(.5*inner(dev_fab,dev_fab))
-      # set anis to -1 if no contact
-      for i in range(numg):
-         if math.isnan(anis.getTupleForDataPoint(i)[0]): anis.setValueOfDataPoint(i,-1)
-      # get local rotation
-      rot = prob.getLocalAvgRotation()
-      # get local shear strain
-      strain = prob.getCurrentStrain()
-      volume_strain = trace(strain)
-      dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
-      shear = sqrt(2*inner(dev_strain,dev_strain))
-      
-      # export FE scene
-      saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
-      # export DE scenes
-      prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
-      # export local responses at Gauss points
-      saveGauss2D(gaussDir+"/time_"+str(t)+".dat",strain=strain,stress=stress,fab=fab)
-      print "force at the bottom: %e"%magforceBot
+
+		# check quasi-static state
+		while Ek > rtol:
+			u, u_t = prob.solve(damp=0.99,dynRelax=True)
+			Ek =  abs(integrate(length(u_t)**2*rho)/2.)
+			print t, Ek
+		Ek_max = 0
+		
+		# get stress at (n) timesteps
+		stress = prob.getCurrentStress()
+		dom = prob.getDomain()
+		proj = Projector(dom)
+		# project Gauss point value to nodal value
+		sig = proj(stress)
+		# interpolate to stress at the boundary
+		sig_bounda = interpolate(sig,FunctionOnBoundary(dom)) 
+		# compute boundary traction by s_ij*n_j
+		traction = matrix_mult(sig_bounda,dom.getNormal())
+		# get mask for boundary nodes on the bottom
+		botSurf = whereZero(bx[1])
+		# traction at the bottom
+		tractBot = traction*botSurf
+		# resultant force at the bottom
+		forceBot = integrate(tractBot,where=FunctionOnBoundary(dom))
+		# length of the bottom surface
+		lengthBot = integrate(botSurf,where=FunctionOnBoundary(dom))
+		# force magnitude
+		magforceBot = sqrt(forceBot.dot(forceBot))
+		# write stress at the bottom surface
+		fout.write(str(t*dt)+' '+str(magforceBot)+' '+str(lengthBot)+'\n')
+		
+		# get local void ratio
+		vR = prob.getLocalVoidRatio(); vR = proj(vR)
+		# get local fabric intensity
+		fab = prob.getLocalFabric()
+		dev_fab = 4.*(fab-trace(fab)/dim*kronecker(prob.getDomain()))
+		anis = sqrt(.5*inner(dev_fab,dev_fab))
+		# set anis to -1 if no contact
+		for i in range(numg):
+			if math.isnan(anis.getTupleForDataPoint(i)[0]): anis.setValueOfDataPoint(i,-1)
+		# get local rotation
+		rot = prob.getLocalAvgRotation(); rot = proj(rot)
+		# get local shear strain
+		strain = prob.getCurrentStrain()
+		volume_strain = trace(strain)
+		dev_strain = symmetric(strain) - volume_strain*kronecker(prob.getDomain())/dim
+		shear = sqrt(2*inner(dev_strain,dev_strain)); shear = proj(shear)
+		
+		# export FE scene
+		saveVTK(vtkDir+"/ms"+mshName+"FE_%d.vtu"%t,u=u,sig=sig,shear=shear,e=vR,rot=rot,anis=anis)
+		# export DE scenes
+		prob.VTKExporter(vtkDir=vtkDir+"/ms"+mshName+"DE",t=t)
+		# export local responses at Gauss points
+		saveGauss2D(gaussDir+"/time_"+str(t)+".dat",strain=strain,stress=stress,fab=fab)
+		print "force at the bottom: %e"%magforceBot
       
    # next iteration
-   print "Step NO.%d finished, L2 norm of velocity at %2.1es: %e"%(t,t*dt,Lsup(u_t))
+   print "Step NO.%d finished, current kinetic energy: %2.1e"%(t,Ek)
    t += 1
 
 prob.getCurrentPacking(pos=(),time=t,prefix=packDir)

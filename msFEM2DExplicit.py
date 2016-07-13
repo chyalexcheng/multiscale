@@ -226,7 +226,7 @@ class MultiScale(object):
          self.__pde.setValue(X=X, Y=Y, y=self.__Nbc)
       """
    
-   def solve(self,damp=.2):
+   def solve(self,damp=.2,dynRelax=False):
       """
       solve the equation of motion in centeral difference scheme
       """
@@ -261,10 +261,10 @@ class MultiScale(object):
          self.__Nbc,self.__sceneExt=self.applyDisplIncrement_getTractionDEM(DEdu=DEdu)
          """
          # apply boundary velocity and return an asynResult object
-         arFEfAndSceneExt=self.applyDisplIncrement_getForceDEM(DEdu=DEdu)
+         arFEfAndSceneExt=self.applyDisplIncrement_getForceDEM(DEdu=DEdu,dynRelax=dynRelax)
 
       # !!!!!! update stress and scenes from DEM part using strain at (n+1) time step
-      self.__stress,self.__scenes = self.applyStrain_getStressDEM(st=D)
+      self.__stress,self.__scenes = self.applyStrain_getStressDEM(st=D,dynRelax=dynRelax)
       """
       # !!!!!! update scenes and return asynResult objects (deprecated)
       arScenes = self.applyStrain(st=D)
@@ -294,12 +294,12 @@ class MultiScale(object):
    """
    apply strain to DEM packing and get stress
    """
-   def applyStrain_getStressDEM(self,st=escript.Data()):
+   def applyStrain_getStressDEM(self,st=escript.Data(),dynRelax=False):
       st = st.toListOfTuples()
       st = numpy.array(st).reshape(-1,4)
       stress = escript.Tensor(0,escript.Function(self.__domain))
       # load DEM packing with strain
-      scenes = self.__pool.map(shear2D,zip(self.__scenes,st,self.__nsOfDE_int))
+      scenes = self.__pool.map(shear2D,zip(self.__scenes,st,self.__nsOfDE_int,repeat(dynRelax)))
       # return homogenized stress
       s = self.__pool.map(getStress2D,scenes)
       for i in xrange(self.__numGaussPoints):
@@ -319,13 +319,13 @@ class MultiScale(object):
          #~ Nbc.setValueOfDataPoint(FEid,FENbc[FEid])
       #~ return Nbc, sceneExt
       
-   def applyDisplIncrement_getForceDEM(self,DEdu=escript.Data()):
+   def applyDisplIncrement_getForceDEM(self,DEdu=escript.Data(),dynRelax=False):
       """
       apply displacement increment to the external DE domain,
       and get boundary force from DE interface nodes
       """
       arFEfAndSceneExt = self.__pool.apply_async( \
-                            moveInterface_getForce2D,(self.__sceneExt,self.__conf,DEdu, \
+                            moveInterface_getForce2D,(self.__sceneExt,self.__conf,DEdu,dynRelax, \
                             self.__mIds,self.__FEDENodeMap,self.__nsOfDE_ext))
       return arFEfAndSceneExt
       

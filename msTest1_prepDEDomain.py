@@ -17,7 +17,7 @@ lx = 1.2; ly = 1.2
 # confining pressure
 confining = 0
 # pulling speed on ends of DE membrane
-pullSpeed = -1.e-2
+pullSpeed = -2.e-2
 # type of membrane material
 GSType = 'PP'
 color = [84./255,89./255,109./255]

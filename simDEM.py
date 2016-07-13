@@ -4,11 +4,11 @@ __institution__="The Hong Kong University of Science and Technology"
 
 """
 DEM part for Hierachical Multiscale simulation:
-	sets up packings representing material points (RVE) at Gauss points
-	of the FE domain and returns updated stress
+   sets up packings representing material points (RVE) at Gauss points
+   of the FE domain and returns updated stress
 DEM part for Concurrent Multiscale simulation:
-	sets up the concurrent DE domain which receives boundary displacement
-	from the FE domain and returns back boundary nodal force to FE solver
+   sets up the concurrent DE domain which receives boundary displacement
+   from the FE domain and returns back boundary nodal force to FE solver
 """
 
 import time
@@ -56,11 +56,22 @@ def initNbc(scene,conf,mIds,FEDEMap):
 """
 
 # apply displacement on interface DE nodes and return nodal force
-def moveInterface_getForce2D(scene,conf,DEdu,mIds,FEDEMap,ns):
+def moveInterface_getForce2D(scene,conf,DEdu,dynRelax,mIds,FEDEMap,ns):
    Omega().stringToScene(scene)
    if conf:
       # apply boundary force on membrane nodes
       applyBoundaryForce(conf,mIds)
+   # if in dynamic relaxation mode
+   if dynRelax:
+      # increase damping ratio
+      damp = newton.damping
+      newton.damping = 0.99
+      # stop loading 
+      for n in [mIds[0],mIds[-1]]:
+         pullSpeed = O.bodies[n].state.vel
+         O.bodies[n].shape.color = pullSpeed
+         O.bodies[n].state.vel = Vector3(0,0,0)
+   # assign interface velocity
    b = Omega().bodies
    for key in DEdu.keys():
       du = utils.Vector3(DEdu[key][0],DEdu[key][1],0)
@@ -70,6 +81,14 @@ def moveInterface_getForce2D(scene,conf,DEdu,mIds,FEDEMap,ns):
    Omega().run(ns,True)
    # get boundary force on membrane nodes
    FEf = getBoundaryForce(FEDEMap)
+   # set loading speed and damping to normal after microscale simulations
+   if dynRelax:
+      # reset damping ratio
+      newton.damping = damp
+      # start loading
+      for n in [mIds[0],mIds[-1]]:
+         pullSpeed = O.bodies[n].shape.color
+         O.bodies[n].state.vel = pullSpeed
    # save Omega to scene and reset Omega to reduce leaked memory
    scene = Omega().sceneToString()
    Omega().reset()
@@ -142,14 +161,21 @@ def shear2D(param):
    Omega().stringToScene(param[0])
    dstrain = utils.Matrix3(param[1][0],param[1][1],0, param[1][2],param[1][3],0, 0,0,0)
    ns = param[2]
+   dynRelax = param[3]
    Omega().cell.velGrad=dstrain/(ns*Omega().dt)
-   Omega().run(ns,True)
+   if dynRelax: 
+      damp = Omega().engines[-1].damping
+      Omega().engines[-1].damping = 0.99
+      Omega().run(ns,True)
+      Omega().engines[-1].damping = damp
+   else:
+      Omega().run(ns,True)
    return Omega().sceneToString()
 
 # return time step of a DE scene
 def getScenetDt(scene):
-	Omega().stringToScene(scene)
-	return Omega().dt
+   Omega().stringToScene(scene)
+   return Omega().dt
 
 # apply hydrostatic pressure on membrane nodes
 def applyBoundaryForce(conf,mIds,width=0.1):
