@@ -18,11 +18,11 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # name of mesh file
-mshName = 'MshQuad6_0';
+mshName = 'MshQuad6_5';
 # Mesh with 8-node triangle elements; each element has 4 Gauss point
-if mshName[3:7] == 'Quad': numOfElements = (int(mshName[-3])*2)**2
+if mshName[3:7] == 'Quad': numOfElements = (int(mshName[7])*2)**2
 # Mesh with 3-node triangle elements; each element has 1 Gauss point
-else:	numOfElements = 2*(int(mshName[-3])*2)**2
+else:	numOfElements = 2*(int(mshName[7])*2)**2
 # number of Gauss points
 gp = 4; numg = gp*numOfElements;
 packNo = range(0,numg)
@@ -31,7 +31,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 2.0; duration = 25/2.
+safe = 1.0; duration = 25/2.
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test1/'
 # import node IDs of membrane in exterior DE domain
@@ -51,7 +51,7 @@ fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'_quasi.dat','
 ###################
 
 # multiscale model description
-dom = ReadGmsh(mshName[:-2]+'.msh',numDim=dim,integrationOrder=2)
+dom = ReadGmsh(mshName[:8]+'.msh',numDim=dim,integrationOrder=2)
 prob = MultiScale(domain=dom,dim=dim,ng=numg,np=nump,rho=rho,mIds=mIds,\
                   FEDENodeMap=FEDENodeMap,DE_ext=DE_ext)
 
@@ -97,9 +97,9 @@ t = 1
 nt = int(duration/dt)
 tWrite = nt/100
 Ek_max = 0
-rtol = 1e-4
+rtol = 1e-3
 # directory to export vtk data and packing scenes
-Dir = 'msTest1/explicit/gp'+str(gp)+'/'+mshName+'/'
+Dir = 'msTest1/explicit/gp'+str(gp)+'/'+mshName+'_safe_1.0_quasi/'
 vtkDir = './result/vtk/'+Dir
 packDir = './result/packing/'+Dir
 gaussDir = './result/gauss/'+Dir
