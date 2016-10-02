@@ -11,7 +11,7 @@ import numpy as np
 #####################
 
 # mesh file name
-mshName = 'MshQuad3'
+mshName = 'MshQuad6'
 # sample size, 1.2m by 1.2m
 lx = 1.2; ly = 1.2
 # initial pressure on membrane from soil
@@ -26,7 +26,7 @@ damp = 0.4
 width = 0.1
 # discretization per cylinder
 rGrid = 5.e-3
-L = lx/2/int(mshName[-1]); nL = 0 
+L = lx/2/int(mshName[-1]); nL = 8 
 if not nL: nL = int(L/(2.*rGrid))
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0
@@ -166,7 +166,7 @@ O.engines=[
        Law2_GridCoGridCoGeom_FrictPhys_CundallStrack(),
        ]
    ),
-   NewtonIntegrator(gravity=(0,0,0),damping=damp)
+   NewtonIntegrator(gravity=(0,0,0),damping=damp,label='newton')
 ]
 
 #################
