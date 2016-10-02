@@ -11,7 +11,7 @@ import numpy as np
 #####################
 
 # mesh file name
-mshName = 'MshQuad6'
+mshName = 'MshQuad8'
 # sample size, 1.2m by 1.2m
 lx = 1.2; ly = 1.2
 # confining pressure
@@ -25,8 +25,10 @@ color = [84./255,89./255,109./255]
 damp = 0.2
 width = 0.1
 # discretization per cylinder
-rGrid = 5.e-3
+#~ rGrid = 5.e-3
 L = lx/2/int(mshName[-1]); nL = 0 
+# below is rGrid for MshQuad8 mesh
+rGrid = 4.687e-3; nL = 6
 if not nL: nL = int(L/(2.*rGrid))
 # factor for greater GridCo-GridCo stiffness
 stif = 1e0
@@ -57,8 +59,8 @@ E_i = 0.   ; v_i = 0.; phi_i = 0.; sigTmax_i = sigTmax; sigSmax_i = sigTmax
 
 ## material parameters for external behavior
 # m2i: membrane-interface
-E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(21)
-#~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
+#~ E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(21)
+E_m2i = stif*young; v_m2i = 0.33; phi_m2i = radians(0)
 
 #################
 ##  Functions  ##
@@ -307,7 +309,7 @@ if pullSpeed:
 while 1:
 	O.run(100,True)
 	#~ if O.forces.f(4*int(mshName[-1])).norm() > 1e-2:
-	if O.forces.f(69).norm() > 1e-2:
+	if O.forces.f(75).norm() > 1e-2:
 			break
 
 # save exterior DE scene

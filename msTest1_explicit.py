@@ -18,7 +18,7 @@ import time
 # sample size, 1.2m by 1.2m
 dim = 2; lx = 1.2; ly = 1.2
 # name of mesh file
-mshName = 'MshQuad6_5';
+mshName = 'MshQuad8_0';
 # Mesh with 8-node triangle elements; each element has 4 Gauss point
 if mshName[3:7] == 'Quad': numOfElements = (int(mshName[7])*2)**2
 # Mesh with 3-node triangle elements; each element has 1 Gauss point
@@ -31,7 +31,7 @@ rho = 2254.; damp = .2
 # number of processes in multiprocessing
 nump = 32
 # safety factor for timestep size and real-time duration of simulation 
-safe = 1.0; duration = 25/2.
+safe = 0.5; duration = 25/2.
 # directory for exterior DE scenes and variables
 sceneExt ='./DE_exts/Test1/'
 # import node IDs of membrane in exterior DE domain
@@ -40,8 +40,8 @@ mIds = numpy.load(sceneExt+'mNodesIds'+mshName+'.npy')
 FEDENodeMap = numpy.load(sceneExt+'FEDENodeMap'+mshName+'.npy').item()
 # state filename of initial membrane DE elements
 DE_ext = './DE_exts/Test1/DE_ext_'+mshName+'.yade.gz'
-#~ # import FE-DE mapping of boundary element IDs (deprecated)
-#~ FEDEBoundMap = numpy.load(sceneExt+'FEDEBoundMap'+mshName+'.npy').item()
+# import FE-DE mapping of boundary element IDs (deprecated)
+FEDEBoundMap = numpy.load(sceneExt+'FEDEBoundMap'+mshName+'.npy').item()
 # file to write force on the bottom
 graphDir = './result/graphs/msTest1_Explicit/gp'+str(gp)+'/'
 fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'_quasi.dat','w')
@@ -52,8 +52,8 @@ fout=file(graphDir+'safe_%1.1f_'%safe+'t_%1.1f_'%duration+mshName+'_quasi.dat','
 
 # multiscale model description
 dom = ReadGmsh(mshName[:8]+'.msh',numDim=dim,integrationOrder=2)
-prob = MultiScale(domain=dom,dim=dim,ng=numg,np=nump,rho=rho,mIds=mIds,\
-                  FEDENodeMap=FEDENodeMap,DE_ext=DE_ext)
+prob = MultiScale(domain=dom,dim=dim,ng=numg,np=nump,rho=rho,\
+                  mIds=mIds,FEDENodeMap=FEDENodeMap,DE_ext=DE_ext)
 
 # nodal coordinate
 dom = prob.getDomain()
@@ -96,7 +96,6 @@ time_start = time.time()
 t = 1
 nt = int(duration/dt)
 tWrite = nt/100
-Ek_max = 0
 rtol = 1e-3
 # directory to export vtk data and packing scenes
 Dir = 'msTest1/explicit/gp'+str(gp)+'/'+mshName+'_safe_1.0_quasi/'
@@ -108,17 +107,15 @@ while t <= nt:
    # update displacement and velocity at (n+1) timesteps
    u, u_t = prob.solve(damp=damp)
    # update maximum kinetic energy
-   Ek =  abs(integrate(length(u_t)**2*rho)/2.)
-   if Ek > Ek_max: Ek_max = Ek
+   Ek =  integrate(length(u_t)**2*rho)/2.
    # write data at selected timesteps
    if t%tWrite == 0:
 
 		# check quasi-static state
-		while Ek > rtol:
+		while Ek > rtol or Ek <0:
 			u, u_t = prob.solve(damp=0.99,dynRelax=True)
-			Ek =  abs(integrate(length(u_t)**2*rho)/2.)
+			Ek =  integrate(length(u_t)**2*rho)/2.
 			print t, Ek
-		Ek_max = 0
 		
 		# get stress at (n) timesteps
 		stress = prob.getCurrentStress()
