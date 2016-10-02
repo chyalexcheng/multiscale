@@ -11,13 +11,13 @@ import numpy as np
 #####################
 
 # mesh file name
-mshName = 'Msh4'
+mshName = 'MshQuad3'
 # sample size, 1.2m by 1.2m
 lx = 1.2; ly = 1.2
 # initial pressure on membrane from soil
 pressure = -2.e4
 # pulling speed on ends of DE membrane
-pullSpeed = 1.e-2
+pullSpeed = 2.e-2
 # type of membrane material
 GSType = 'PP'
 color = [84./255,89./255,109./255]
@@ -219,6 +219,9 @@ for i,j in zip(iNodesIds,iNodesIds[1:]):
 
 # create all GridNodes first
 mNodesIds = []
+# (if quad elements are used n = 4, else n =2)
+if mshName[-5:-1] == 'Quad': n = 4
+else:	n = 2
 # primary nodes adjacent to interface nodes (change this when mesh changes)
 for i in iNodesIds:
    pos_new = O.bodies[i].state.pos-Vector3(0,2.*rGrid,0)
@@ -226,8 +229,8 @@ for i in iNodesIds:
       gridNode(pos_new,rGrid,wire=True,fixed=False,material='mMat',color=[0.,1.,0.])))
 # refine membrane elements
 for i,j in zip(mNodesIds[:-1],mNodesIds[1:]):
-   dL = (O.bodies[j].state.pos-O.bodies[i].state.pos)/nL
-   for k in xrange(nL-1):
+   dL = (O.bodies[j].state.pos-O.bodies[i].state.pos)/(2*nL/n+1)
+   for k in xrange((2*nL/n+1)-1):
       pos = O.bodies[i].state.pos+(k+1)*dL
       mNodesIds.append(O.bodies.append(
          gridNode(pos,rGrid,wire=True,fixed=False,material='mMat',color=[0.,1.,0.])))

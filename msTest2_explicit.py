@@ -3,6 +3,7 @@
 """
 from esys.escript import *
 from esys.weipa import saveVTK
+from esys.finley import ReadGmsh
 from esys.escript.pdetools import Projector
 from esys.escript.linearPDEs import LinearPDE,SolverOptions
 
